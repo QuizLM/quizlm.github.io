@@ -1,5 +1,5 @@
 {
-  "name": "Simple Hello World",
-  "description": "A simple React application that displays a 'Hello, World!' message, styled with Tailwind CSS.",
+  "name": "Quiz LM Beta",
+  "description": "An empty app",
   "requestFramePermissions": []
 }

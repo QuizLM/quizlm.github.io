@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz LM Project Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1, h2, h3 {
+            color: #1a237e;
+            border-bottom: 2px solid #c5cae9;
+            padding-bottom: 5px;
+        }
+        h1 { font-size: 2.5em; }
+        h2 { font-size: 2em; margin-top: 40px; }
+        h3 { font-size: 1.5em; margin-top: 30px; border-bottom-style: dashed; }
+        code {
+            background-color: #e8eaf6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: "Courier New", Courier, monospace;
+        }
+        .note {
+            background-color: #fff9c4;
+            border-left: 5px solid #fbc02d;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .security {
+            background-color: #ffebee;
+            border-left: 5px solid #c62828;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <h1>Quiz LM - Project Documentation</h1>
+    <p class="note"><strong>Last Updated:</strong> [Current Date]</p>
+
+    <p>This document provides a comprehensive overview of the recent major upgrades to the Quiz LM application. It covers the new user interface, the full payment and subscription system, and the daily usage limits architecture.</p>
+
+    <!-- ==================================================================== -->
+    <!-- ======================= UI/UX UPGRADES =========================== -->
+    <!-- ==================================================================== -->
+    <h2>1. Major UI/UX Enhancements</h2>
+    <p>The application's front end was significantly overhauled to improve user experience, navigation, and engagement.</p>
+    
+    <h3>1.1. New Homepage & Navigation Flow</h3>
+    <ul>
+        <li><strong>Homepage Dashboard:</strong> A new homepage (<code>#homepage-section</code>) now serves as the central hub for users after logging in. It provides clear entry points to the app's main features.</li>
+        <li><strong>Side Menu (Hamburger Menu):</strong> A modern, off-canvas side menu (<code>#side-menu-overlay</code>) has replaced the previous top navigation bar. It provides access to all sections of the app, including user profile information and settings.</li>
+        <li><strong>Content Modals:</strong> Several features are now presented in clean, dismissible modals to avoid navigating away from the main dashboard. This includes modals for "About Us", "User Guide", and the "Our Plans" pricing page.</li>
+    </ul>
+
+    <h3>1.2. Authentication & Onboarding</h3>
+    <ul>
+        <li><strong>Login Gate:</strong> A new login gate (<code>#login-gate</code>) is presented to unauthenticated users.</li>
+        <li><strong>DPDP Act Compliance:</strong> The login gate requires users to consent to being over 18 and to the Privacy Policy before they can sign in, in compliance with data protection regulations.</li>
+    </ul>
+
+    <h3>1.3. Refined User Flows</h3>
+    <ul>
+        <li><strong>Separated Flows:</strong> The core functionality has been split into two distinct user flows for clarity: "Build a Custom Quiz" and "Content Creation Tools" (Paid Services).</li>
+        <li><strong>Contextual UI:</strong> The filter page now conditionally shows or hides tabs based on the user's entry point, simplifying the interface.</li>
+    </ul>
+
+    <!-- ==================================================================== -->
+    <!-- ======================= PAYMENT SYSTEM =========================== -->
+    <!-- ==================================================================== -->
+    <h2>2. Payment & Subscription System Architecture</h2>
+    <p>A complete payment and subscription system was integrated using Razorpay to allow users to upgrade to premium plans ("Spark" and "Pro"). The system is designed to be secure, reliable, and robust.</p>
+
+    <h3>2.1. System Components</h3>
+    <p>The system consists of three main parts: the database schema, three Supabase Edge Functions for backend logic, and the frontend UI.</p>
+
+    <h4>Database Schema Updates</h4>
+    <p>The database was extended to support subscriptions, daily limits, and payment transaction logging.</p>
+    
+    <h5>Table: <code>profiles</code> (Updated)</h5>
+    <table>
+        <thead>
+            <tr>
+                <th>Column Name</th>
+                <th>Type</th>
+                <th>Purpose</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>subscription_status</code></td>
+                <td>TEXT</td>
+                <td>Stores the user's current plan: 'free', 'spark', or 'pro'. Defaults to 'free'.</td>
+            </tr>
+            <tr>
+                <td><code>plan_expiry_date</code></td>
+                <td>TIMESTAMPTZ</td>
+                <td>Stores the timestamp when a paid plan expires. NULL for free users.</td>
+            </tr>
+            <tr>
+                <td><code>daily_queries_used</code></td>
+                <td>INTEGER</td>
+                <td>Tracks the number of quizzes or documents generated per day.</td>
+            </tr>
+            <tr>
+                <td><code>daily_questions_attempted</code></td>
+                <td>INTEGER</td>
+                <td>Tracks the number of individual questions answered per day.</td>
+            </tr>
+             <tr>
+                <td><code>last_reset_date</code></td>
+                <td>DATE</td>
+                <td>Stores the date when the daily limits were last reset.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h5>Table: <code>payments</code> (New)</h5>
+    <table>
+        <thead>
+            <tr>
+                <th>Column Name</th>
+                <th>Type</th>
+                <th>Purpose</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>id</code></td>
+                <td>UUID</td>
+                <td>Primary key for the payment record.</td>
+            </tr>
+            <tr>
+                <td><code>user_id</code></td>
+                <td>UUID</td>
+                <td>Foreign key linking to the user who made the payment.</td>
+            </tr>
+            <tr>
+                <td><code>razorpay_payment_id</code></td>
+                <td>TEXT (UNIQUE)</td>
+                <td>The unique payment ID from Razorpay. The UNIQUE constraint prevents duplicate processing.</td>
+            </tr>
+            <tr>
+                <td><code>status</code></td>
+                <td>TEXT</td>
+                <td>The final status of the payment (e.g., 'captured_by_client', 'captured_by_webhook').</td>
+            </tr>
+             <tr>
+                <td><code>plan_purchased</code></td>
+                <td>TEXT</td>
+                <td>The plan the user bought ('spark' or 'pro').</td>
+            </tr>
+             <tr>
+                <td><code>webhook_payload</code></td>
+                <td>JSONB</td>
+                <td>Stores the complete webhook event from Razorpay for auditing purposes.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h4>Supabase Edge Functions</h4>
+    <p>Three serverless functions handle all backend payment logic securely.</p>
+    
+    <ol>
+        <li><strong><code>create-razorpay-order</code></strong>
+            <ul>
+                <li><strong>Purpose:</strong> Creates a secure payment order with Razorpay.</li>
+                <li><strong>Trigger:</strong> Called by the frontend when a user clicks an "Upgrade" button.</li>
+                <li><strong>Logic:</strong>
+                    <ol>
+                        <li>Authenticates the user via their JWT.</li>
+                        <li>Validates the incoming <code>amount</code> and <code>plan</code>.</li>
+                        <li>Calls the Razorpay Orders API using secure environment variables.</li>
+                        <li>Returns the <code>order_id</code> to the frontend to initiate the Razorpay Checkout modal.</li>
+                    </ol>
+                </li>
+            </ul>
+        </li>
+        <li><strong><code>verify-razorpay-payment</code></strong>
+            <ul>
+                <li><strong>Purpose:</strong> Provides immediate, client-side verification after a successful payment.</li>
+                <li><strong>Trigger:</strong> Called by the Razorpay Checkout success handler on the frontend.</li>
+                <li><strong>Logic:</strong>
+                    <ol>
+                        <li>Receives payment details from the client.</li>
+                        <li><strong>Verifies the Razorpay signature</strong> cryptographically to confirm the request is legitimate.</li>
+                        <li>If the signature is valid, it calculates a 30-day expiry date and updates the user's record in the <code>profiles</code> table.</li>
+                        <li>Logs the transaction in the new <code>payments</code> table with a status of 'captured_by_client'.</li>
+                    </ol>
+                </li>
+            </ul>
+        </li>
+        <li><strong><code>razorpay-webhook-handler</code></strong>
+            <ul>
+                <li><strong>Purpose:</strong> Provides the primary, most reliable server-to-server confirmation of payment. This is the source of truth and acts as a failsafe if the user closes their browser before client-side verification completes.</li>
+                <li><strong>Trigger:</strong> Called directly by Razorpay's servers when a <code>payment.captured</code> event occurs.</li>
+                <li><strong>Logic:</strong>
+                    <ol>
+                        <li><strong>Verifies the webhook signature</strong> to ensure the request is from Razorpay.</li>
+                        <li>Checks the <code>payments</code> table to see if the transaction has already been processed (idempotency).</li>
+                        <li>If the payment is new, it updates the user's record in the <code>profiles</code> table.</li>
+                        <li>It then creates or updates the record in the <code>payments</code> table with a status of 'captured_by_webhook'.</li>
+                    </ol>
+                </li>
+            </ul>
+        </li>
+    </ol>
+    
+    <div class="security">
+        <strong>Security Measures Implemented:</strong>
+        <ul>
+            <li><strong>Restricted CORS:</strong> All functions that interact with the client have their <code>Access-Control-Allow-Origin</code> header restricted specifically to our app's domain (<code>https://ssc-gk.github.io/History/</code>).</li>
+            <li><strong>Server-Side Validation:</strong> Functions validate all incoming data (e.g., ensuring <code>amount</code> is a number, <code>plan</code> is a valid value) before processing.</li>
+            <li><strong>Cryptographic Signature Verification:</strong> Both the client-side verification and the webhook handler use HMAC-SHA256 to verify that the payment details are authentic and have not been tampered with.</li>
+            <li><strong>Use of Secrets:</strong> All API keys and secrets are stored securely as Supabase Environment Variables and are never exposed on the client side.</li>
+        </ul>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- ======================= DAILY LIMITS ============================= -->
+    <!-- ==================================================================== -->
+    <h2>3. Daily Usage Limits System</h2>
+    <p>To manage resource usage for different subscription tiers, a daily limiting system was implemented.</p>
+    
+    <h3>3.1. How It Works</h3>
+    <ul>
+        <li><strong>Database Tracking:</strong> The <code>daily_queries_used</code> and <code>daily_questions_attempted</code> columns in the <code>profiles</code> table track user activity.</li>
+        <li><strong>Daily Reset:</strong> A function in <code>index.js</code> (<code>checkAndResetDailyLimits</code>) runs when an authenticated user loads the app. It compares the current date with the <code>last_reset_date</code> in their profile. If it's a new day, it resets the daily counters to 0 and updates the date.</li>
+        <li><strong>Frontend Enforcement:</strong> Before a user can start a quiz, generate a document, or answer a question, a handler function (e.g., <code>handleQueryAttempt</code>) checks their current usage against their plan's limits (defined in <code>js/state.js</code>).</li>
+        <li><strong>Upgrade Prompt:</strong> If a user hits their limit, a modal appears informing them and provides a direct link to the "Our Plans" modal to encourage upgrading.</li>
+    </ul>
+
+</body>
+</html>
