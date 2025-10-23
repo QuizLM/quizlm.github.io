@@ -6,7 +6,7 @@ import * as auth from './auth.js';
 
 let appCallbacks = {};
 let docWorker = null;
-let classificationHierarchy = {}; // NEW: To store subject -> topic -> subTopic relations
+let classificationHierarchy = {}; // To store subject -> topic -> subTopic relations
 
 /**
  * Triggers a "pop" animation on a given element to provide visual feedback.
@@ -132,7 +132,7 @@ function bindFilterEventListeners() {
         const el = dom.filterElements[key];
         if (el.toggleBtn) {
             el.toggleBtn.addEventListener('click', () => toggleDropdown(key));
-            // NEW: Add click listener to the whole list for delegation and improved UX
+            
             el.list.addEventListener('click', (e) => {
                 const item = e.target.closest('.multiselect-item');
                 if (item && !item.classList.contains('disabled')) {
@@ -140,7 +140,6 @@ function bindFilterEventListeners() {
                     if (checkbox && e.target.tagName !== 'INPUT') {
                         checkbox.checked = !checkbox.checked;
                     }
-                    // This is the only place we need to trigger the update
                     applyFiltersAndUpdateUIDebounced();
                     updateMultiselectToggleText(key);
                 }
@@ -189,21 +188,24 @@ function bindFilterEventListeners() {
 
 async function loadQuestionsForFiltering() {
     if (state.allQuestionsMasterList.length > 0) {
-        // Data already loaded, just re-initialize the UI state
         applyFiltersAndUpdateUI();
         return;
     }
     
     dom.loadingOverlay.style.display = 'flex';
-    dom.loadingText.textContent = 'Welcome to QuizLM...';
+    dom.loadingText.textContent = 'Loading question bank...';
     try {
-        const { data, error } = await supabase.from('questions').select('*').order('v1_id', { ascending: true });
+        const { data, error } = await supabase
+            .from('questions')
+            .select('subject, topic, subTopic, difficulty, questionType, examName, examYear, tags, id, v1_id, question, question_hi, options, options_hi, correct, explanation')
+            .order('v1_id', { ascending: true });
+
         if (error) throw error;
         state.allQuestionsMasterList = data;
         
         buildClassificationHierarchy();
         populateAllFiltersInitially();
-        applyFiltersAndUpdateUI(); // Run once to set initial counts and state
+        applyFiltersAndUpdateUI(); 
 
     } catch (error) {
         console.error('Error fetching questions:', error);
@@ -288,6 +290,7 @@ function populateAllFiltersInitially() {
 function applyFiltersAndUpdateUI() {
     updateSelectedFiltersFromUI();
     
+    // --- CASCADING FILTER LOGIC ---
     const selectedSubjects = state.selectedFilters.subject;
     const availableTopics = new Set();
     if (selectedSubjects.length > 0) {
@@ -297,7 +300,9 @@ function applyFiltersAndUpdateUI() {
             }
         });
     }
-    updateDropdownOptions('topic', availableTopics, selectedSubjects.length > 0);
+    if (updateDropdownOptions('topic', availableTopics, selectedSubjects.length > 0)) {
+        updateSelectedFiltersFromUI(); 
+    }
 
     const selectedTopics = state.selectedFilters.topic;
     const availableSubTopics = new Set();
@@ -312,8 +317,11 @@ function applyFiltersAndUpdateUI() {
             }
         });
     }
-    updateDropdownOptions('subTopic', availableSubTopics, selectedTopics.length > 0);
-
+    if (updateDropdownOptions('subTopic', availableSubTopics, selectedTopics.length > 0)) {
+        updateSelectedFiltersFromUI();
+    }
+    
+    // --- DYNAMIC COUNTING LOGIC ---
     config.filterKeys.forEach(key => {
         const tempFilters = { ...state.selectedFilters };
         delete tempFilters[key];
@@ -321,7 +329,7 @@ function applyFiltersAndUpdateUI() {
         const relevantQuestions = filterQuestions(state.allQuestionsMasterList, tempFilters);
         const counts = new Map();
         relevantQuestions.forEach(q => {
-            const value = q[key];
+            let value = q[key];
              if (key === 'tags' && Array.isArray(value)) {
                 value.forEach(tag => counts.set(tag, (counts.get(tag) || 0) + 1));
             } else if (value) {
@@ -339,7 +347,7 @@ function applyFiltersAndUpdateUI() {
 
 function updateDropdownOptions(key, availableOptionsSet, isParentSelected) {
     const filterEl = dom.filterElements[key];
-    if (!filterEl || !filterEl.list) return;
+    if (!filterEl || !filterEl.list) return false;
 
     const items = filterEl.list.querySelectorAll('.multiselect-item');
     let hasSelectionChanged = false;
@@ -358,18 +366,15 @@ function updateDropdownOptions(key, availableOptionsSet, isParentSelected) {
         }
     });
 
-    if (hasSelectionChanged) {
-        updateSelectedFiltersFromUI();
-        updateMultiselectToggleText(key);
-    }
-    
     if (filterEl.toggleBtn) {
         filterEl.toggleBtn.disabled = !isParentSelected;
         if (!isParentSelected) {
-            const keyName = key.replace(/([A-Z])/g, ' $1');
-            filterEl.toggleBtn.textContent = `Select ${keyName}s`;
+            const keyName = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+            filterEl.toggleBtn.textContent = `Select ${keyName}`;
+            updateMultiselectToggleText(key);
         }
     }
+    return hasSelectionChanged;
 }
 
 function updateCountUI(key, countsMap) {
@@ -440,9 +445,12 @@ function filterDropdownList(key) {
     const filter = searchInput.value.toLowerCase();
     list.querySelectorAll('.multiselect-item').forEach(item => {
         const label = item.querySelector('label').textContent.toLowerCase();
-        // Keep item visible if its own label matches, or if it's currently selected
         const isSelected = item.querySelector('input').checked;
-        item.style.display = (label.includes(filter) || isSelected) ? '' : 'none';
+        const isVisible = item.style.display !== 'none';
+        
+        if (isVisible) {
+             item.style.display = (label.includes(filter) || isSelected) ? '' : 'none';
+        }
     });
 }
 
@@ -493,7 +501,7 @@ function updateMultiselectToggleText(key) {
     } else if (selected.length === 1) {
         toggleBtn.textContent = selected[0];
     } else {
-        toggleBtn.textContent = `${selected.length} ${keyName}s selected`;
+        toggleBtn.textContent = `${selected.length} ${keyName} selected`;
     }
 }
 
