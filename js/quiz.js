@@ -265,19 +265,17 @@ function startQuizLogicForGroup() {
     updateQuizProgressBar();
 }
 
-async function checkAnswer(selectedEnglishOption, button) {
-    const canProceed = await handleQuestionAttempt();
-    if (!canProceed) return;
-
+function checkAnswer(selectedEnglishOption, button) {
+    // --- IMMEDIATE UI FEEDBACK (Part 1) ---
     stopTimer();
     dom.timerBar.classList.add('paused');
+    dom.optionsEl.querySelectorAll('button').forEach(btn => btn.disabled = true);
 
     const cd = state.currentQuizData;
     const currentQuestion = cd.shuffledQuestions[cd.currentQuestionIndex];
     const isCorrect = selectedEnglishOption.trim() === currentQuestion.correct.trim();
 
-    dom.optionsEl.querySelectorAll('button').forEach(btn => btn.disabled = true);
-
+    // --- IMMEDIATE UI FEEDBACK (Part 2) ---
     if (isCorrect) {
         button.classList.add('correct');
         playSound('correct-sound');
@@ -294,6 +292,7 @@ async function checkAnswer(selectedEnglishOption, button) {
         });
     }
 
+    // --- LOCAL STATE UPDATE & EXPLANATION ---
     const timeTaken = config.timePerQuestion - state.timeLeftForQuestion;
     const existingAttemptIndex = cd.attempts.findIndex(a => a.questionId === currentQuestion.id);
     const attempt = {
@@ -321,8 +320,7 @@ async function checkAnswer(selectedEnglishOption, button) {
         cd.attempts.push(attempt);
     }
     
-    // UX IMPROVEMENT: Use typewriter animation for explanation
-    dom.explanationEl.innerHTML = ''; // Clear it first
+    dom.explanationEl.innerHTML = '';
     dom.explanationEl.style.display = 'block';
     typewriterAnimate(dom.explanationEl, buildExplanationHtml(currentQuestion.explanation));
     dom.aiExplainerBtn.disabled = false;
@@ -337,6 +335,10 @@ async function checkAnswer(selectedEnglishOption, button) {
     }
 
     saveQuizState();
+    
+    // --- BACKGROUND TASK ---
+    // Run the attempt check/update in the background without blocking the UI.
+    handleQuestionAttempt();
 }
 
 function stopTimer() {
@@ -363,10 +365,8 @@ function startTimer() {
     }, 1000);
 }
 
-async function handleTimeout() {
-    const canProceed = await handleQuestionAttempt();
-    if (!canProceed) return; // Daily limit reached, which already handles ending the quiz.
-
+function handleTimeout() {
+    // --- IMMEDIATE UI FEEDBACK ---
     stopTimer();
     dom.optionsEl.querySelectorAll('button').forEach(btn => btn.disabled = true);
     dom.timeoutOverlay.classList.add('visible');
@@ -374,7 +374,8 @@ async function handleTimeout() {
 
     const cd = state.currentQuizData;
     const currentQuestion = cd.shuffledQuestions[cd.currentQuestionIndex];
-
+    
+    // --- LOCAL STATE UPDATE & EXPLANATION ---
     const existingAttemptIndex = cd.attempts.findIndex(a => a.questionId === currentQuestion.id);
     const attempt = {
         questionId: currentQuestion.id, v1_id: currentQuestion.v1_id, question: currentQuestion.question,
@@ -392,8 +393,7 @@ async function handleTimeout() {
     if (existingAttemptIndex > -1) cd.attempts[existingAttemptIndex] = attempt;
     else cd.attempts.push(attempt);
     
-    // UX IMPROVEMENT: Use typewriter animation for explanation
-    dom.explanationEl.innerHTML = ''; // Clear it first
+    dom.explanationEl.innerHTML = '';
     dom.explanationEl.style.display = 'block';
     typewriterAnimate(dom.explanationEl, buildExplanationHtml(currentQuestion.explanation));
     
@@ -411,6 +411,10 @@ async function handleTimeout() {
     }
     
     saveQuizState();
+
+    // --- BACKGROUND TASK ---
+    // Run the attempt check/update in the background without blocking the UI.
+    handleQuestionAttempt();
 }
 
 function displayQuestion() {
