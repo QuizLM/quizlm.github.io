@@ -1,5 +1,6 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
+import { fileURLToPath } from 'url';
 
 
 export default defineConfig(({ mode }) => {
@@ -16,7 +17,8 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': path.resolve(__dirname, '.'),
+          // Fix: __dirname is not available in ES modules. The path is resolved using import.meta.url instead.
+          '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.'),
         }
       }
     };

@@ -204,10 +204,11 @@ function updateUserProfileUI(profile) {
     statusBadge.textContent = planText;
     
     if (hasExpiry && profile.plan_expiry_date) {
+        // FIX: Removed buggy timezone offset logic. `new Date()` automatically
+        // converts the UTC string from Supabase to the user's local timezone.
+        // `toLocaleDateString()` then formats it correctly for their locale.
         const expiry = new Date(profile.plan_expiry_date);
-        const userTimezoneOffset = expiry.getTimezoneOffset() * 60000;
-        const localDate = new Date(expiry.getTime() + userTimezoneOffset);
-        expiryBadge.textContent = `Expires on: ${localDate.toLocaleDateString()}`;
+        expiryBadge.textContent = `Expires on: ${expiry.toLocaleDateString()}`;
         expiryBadge.style.display = 'block';
     } else {
         expiryBadge.style.display = 'none';
