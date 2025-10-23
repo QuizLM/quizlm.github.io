@@ -171,6 +171,26 @@ export function loadQuiz() {
 
 export function resumeLoadedQuiz() {
     // Assumes state.questionGroups and state.currentGroupIndex are already populated from localStorage
+    const currentGroup = state.questionGroups[state.currentGroupIndex];
+
+    // BUG FIX 4: Robustness for resuming. If shuffledQuestions is missing (e.g., from an incomplete
+    // background processing in a previous session), rebuild it from the source 'questions' array.
+    if (currentGroup && (!currentGroup.shuffledQuestions || currentGroup.shuffledQuestions.length === 0) && currentGroup.questions.length > 0) {
+        console.warn("Resumed quiz group was missing shuffled questions. Rebuilding from source.");
+        if (state.isShuffleActive) {
+            currentGroup.shuffledQuestions = [...currentGroup.questions];
+            shuffleArray(currentGroup.shuffledQuestions);
+        } else {
+            currentGroup.shuffledQuestions = [...currentGroup.questions].sort((a, b) => {
+                const idA = parseCodedId(a.v1_id);
+                const idB = parseCodedId(b.v1_id);
+                if (idA.prefix < idB.prefix) return -1;
+                if (idA.prefix > idB.prefix) return 1;
+                return idA.num - idB.num;
+            });
+        }
+    }
+
     loadQuestionGroup(state.currentGroupIndex);
     startQuizLogicForGroup();
     applyHeaderCollapsedState();
@@ -427,6 +447,14 @@ function displayQuestion() {
         const cd = state.currentQuizData;
         const index = cd.currentQuestionIndex;
         const question = cd.shuffledQuestions[index];
+
+        if (!question) {
+            console.error("Could not find question to display at index:", index, "in group:", state.currentGroupIndex);
+            Toast.fire({icon: 'error', title: 'Error Resuming Quiz', text: 'Could not load the question. Please start a new quiz.'});
+            if (appCallbacks.restartFullQuiz) appCallbacks.restartFullQuiz();
+            state.isTransitioningQuestion = false; // unlock transition
+            return;
+        }
 
         // Reset UI
         dom.timerElement.classList.remove('timeout');

@@ -99,6 +99,12 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* BUG FIX 3: When the quiz is active, override the body's flex centering to prevent layout issues on mobile */
+body.quiz-active-view {
+    display: block;
+}
+
+
 body.animations-disabled .fireball {
     display: none;
 }
@@ -3541,6 +3547,12 @@ button.button-danger:hover {
 11. RESPONSIVE DESIGN
 ======================================================= */
 @media (max-width: 900px) {
+    body:not(.quiz-active-view) .container {
+        width: 100%;
+        border-radius: 0;
+        min-height: 100vh;
+        border: none;
+    }
     .container {
         width: 100%;
         border-radius: 0;
@@ -3634,20 +3646,7 @@ button.button-danger:hover {
         font-size: 2em;
     }
     .cta-button {
-        padding: 12px 24px;
+        padding: 12px 25px;
         font-size: 1em;
-    }
-    .filter-btn-group {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    .filter-btn {
-        flex-basis: 45%;
-    }
-    .nav-question-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    .side-menu-panel {
-        width: 280px;
     }
 }

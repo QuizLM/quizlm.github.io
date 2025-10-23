@@ -165,7 +165,8 @@ async function loadQuestionsForFiltering() {
     try {
         const { data, error } = await supabase.from('questions').select('*').order('v1_id', { ascending: true });
         if (error) throw error;
-        state.allQuestionsMasterList = data.map(q => ({...q, ...q.classification, ...q.sourceInfo, ...q.properties}));
+        // BUG FIX 2: The data from Supabase is already flat. Do not map and spread non-existent nested properties.
+        state.allQuestionsMasterList = data;
         populateFilterOptions();
         applyAllFilters();
     } catch (error) {

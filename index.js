@@ -52,6 +52,9 @@ function showView(viewId, options = {}) {
         }
     });
 
+    // BUG FIX 3: Reset body class to remove special quiz layout styles
+    document.body.classList.remove('quiz-active-view');
+
     const targetElement = document.getElementById(viewId);
     if (targetElement) {
         // Special display types for certain sections
@@ -60,6 +63,8 @@ function showView(viewId, options = {}) {
         } else if (viewId === 'quiz-main-container') {
             targetElement.style.display = 'block';
             if (dom.quizBreadcrumbContainer) dom.quizBreadcrumbContainer.style.display = 'block';
+            // BUG FIX 3: Add a class to the body to fix mobile layout issues
+            document.body.classList.add('quiz-active-view');
         } else {
             targetElement.style.display = 'block';
         }
@@ -484,6 +489,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             resumeLoadedQuiz();
             this.updateDynamicHeaders();
+
+            // Also initialize the filter module in the background so data is ready if the user returns to it
+            initFilterModule({startQuiz: this.startQuiz.bind(this)});
         },
 
         endQuiz: function() {
@@ -616,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Side Menu (Using Refactored Functions)
             dom.hamburgerMenuBtn.onclick = () => this.toggleSideMenu();
-            dom.sideMenuCloseBtn.onclick = () => this.closeSideMenu();
+            // NOTE: The sideMenuCloseBtn click is now handled by the generic modal logic below
             dom.sideMenuOverlay.onclick = (e) => {
                 if (e.target === dom.sideMenuOverlay) this.closeSideMenu();
             };
@@ -750,8 +758,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                 }
                 if (closeBtn) {
+                     // BUG FIX 1: Add a specific case for the side menu close button
                      closeBtn.onclick = () => {
-                         if (modalKey === 'quizSettingsOverlay') toggleQuizSettings(true);
+                         if (modalKey === 'sideMenuOverlay') this.closeSideMenu();
+                         else if (modalKey === 'quizSettingsOverlay') toggleQuizSettings(true);
                          else if (modalKey === 'profileSettingsOverlay') toggleProfileSettings(true);
                          else toggleModal(modalKey, true);
                      };
