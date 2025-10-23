@@ -121,14 +121,15 @@ export function initQuizModule(callbacks) {
 export function loadQuiz() {
     divideQuestionsIntoGroups(state.filteredQuestionsMasterList);
 
-    // Pre-populate shuffled/sorted order for ALL groups at the start of the quiz.
-    state.questionGroups.forEach(group => {
+    // Immediately process only the first group for a fast start
+    if (state.questionGroups.length > 0) {
+        const firstGroup = state.questionGroups[0];
         if (state.isShuffleActive) {
-            group.shuffledQuestions = [...group.questions];
-            shuffleArray(group.shuffledQuestions);
+            firstGroup.shuffledQuestions = [...firstGroup.questions];
+            shuffleArray(firstGroup.shuffledQuestions);
         } else {
             // Default sort by coded ID (prefix then number)
-            group.shuffledQuestions = [...group.questions].sort((a, b) => {
+            firstGroup.shuffledQuestions = [...firstGroup.questions].sort((a, b) => {
                 const idA = parseCodedId(a.v1_id);
                 const idB = parseCodedId(b.v1_id);
                 if (idA.prefix < idB.prefix) return -1;
@@ -136,13 +137,37 @@ export function loadQuiz() {
                 return idA.num - idB.num;
             });
         }
-    });
+    }
     
     state.currentGroupIndex = 0;
     loadQuestionGroup(state.currentGroupIndex);
     startQuizLogicForGroup();
     applyHeaderCollapsedState();
+
+    // Process the rest of the groups in the background to not block the UI
+    if (state.questionGroups.length > 1) {
+        setTimeout(() => {
+            console.log("Starting background processing of remaining question groups...");
+            for (let i = 1; i < state.questionGroups.length; i++) {
+                const group = state.questionGroups[i];
+                if (state.isShuffleActive) {
+                    group.shuffledQuestions = [...group.questions];
+                    shuffleArray(group.shuffledQuestions);
+                } else {
+                    group.shuffledQuestions = [...group.questions].sort((a, b) => {
+                        const idA = parseCodedId(a.v1_id);
+                        const idB = parseCodedId(b.v1_id);
+                        if (idA.prefix < idB.prefix) return -1;
+                        if (idA.prefix > idB.prefix) return 1;
+                        return idA.num - idB.num;
+                    });
+                }
+            }
+            console.log("Background processing of question groups complete.");
+        }, 500); // Delay to ensure the UI is responsive first
+    }
 }
+
 
 export function resumeLoadedQuiz() {
     // Assumes state.questionGroups and state.currentGroupIndex are already populated from localStorage
@@ -196,6 +221,11 @@ function divideQuestionsIntoGroups(questionsList) {
 
 function loadQuestionGroup(newGroupIndex) {
     if (newGroupIndex < 0 || newGroupIndex >= state.questionGroups.length) return;
+    
+    // UX IMPROVEMENT: Set active group and collapse others for the nav panel
+    state.questionGroups.forEach((group, index) => {
+        group.isSubmenuOpen = (index === newGroupIndex);
+    });
 
     state.currentGroupIndex = newGroupIndex;
     state.currentQuizData = state.questionGroups[state.currentGroupIndex];
@@ -290,9 +320,11 @@ async function checkAnswer(selectedEnglishOption, button) {
     } else {
         cd.attempts.push(attempt);
     }
-
-    dom.explanationEl.innerHTML = buildExplanationHtml(currentQuestion.explanation);
+    
+    // UX IMPROVEMENT: Use typewriter animation for explanation
+    dom.explanationEl.innerHTML = ''; // Clear it first
     dom.explanationEl.style.display = 'block';
+    typewriterAnimate(dom.explanationEl, buildExplanationHtml(currentQuestion.explanation));
     dom.aiExplainerBtn.disabled = false;
 
     updateStatusTracker();
@@ -360,8 +392,10 @@ async function handleTimeout() {
     if (existingAttemptIndex > -1) cd.attempts[existingAttemptIndex] = attempt;
     else cd.attempts.push(attempt);
     
-    dom.explanationEl.innerHTML = buildExplanationHtml(currentQuestion.explanation);
+    // UX IMPROVEMENT: Use typewriter animation for explanation
+    dom.explanationEl.innerHTML = ''; // Clear it first
     dom.explanationEl.style.display = 'block';
+    typewriterAnimate(dom.explanationEl, buildExplanationHtml(currentQuestion.explanation));
     
     dom.optionsEl.querySelectorAll('button').forEach(btn => {
         if (btn.dataset.option.trim() === currentQuestion.correct.trim()) {
@@ -567,10 +601,21 @@ function populateQuizInternalNavigation() {
 }
 
 function toggleQuizInternalNavigation() {
-    dom.navigationPanel.classList.toggle('open');
-    dom.navOverlay.classList.toggle('active');
-    dom.navMenuIcon.classList.toggle('is-active');
-    document.body.style.overflow = dom.navigationPanel.classList.contains('open') ? 'hidden' : 'auto';
+    const isOpen = dom.navigationPanel.classList.toggle('open');
+    dom.navOverlay.classList.toggle('active', isOpen);
+    dom.navMenuIcon.classList.toggle('is-active', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : 'auto';
+
+    // UX IMPROVEMENT: Auto-scroll to the active question when opening the panel
+    if (isOpen) {
+        const activeItem = dom.navigationPanel.querySelector('.nav-grid-item.active-question');
+        if (activeItem) {
+            // Use a short timeout to allow the panel's open animation to start
+            setTimeout(() => {
+                activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 200); 
+        }
+    }
 }
 
 function submitAndReviewAll() {
