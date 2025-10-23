@@ -6,6 +6,7 @@ import * as auth from './auth.js';
 
 let appCallbacks = {};
 let docWorker = null;
+let classificationHierarchy = {}; // NEW: To store subject -> topic -> subTopic relations
 
 /**
  * Triggers a "pop" animation on a given element to provide visual feedback.
@@ -14,9 +15,7 @@ let docWorker = null;
 function triggerCountAnimation(element) {
     if (!element) return;
     
-    // Remove the class first to re-trigger the animation if it was just added
     element.classList.remove('count-updated');
-    // We need a short delay to allow the browser to process the removal before re-adding
     requestAnimationFrame(() => {
         element.classList.add('count-updated');
     });
@@ -56,14 +55,12 @@ async function handleQueryAttempt() {
         return false;
     }
 
-    // Increment the counter
     const newCount = profile.daily_queries_used + 1;
     const updatedProfile = await auth.updateUserProfile(profile.id, { daily_queries_used: newCount });
 
     if (updatedProfile) {
-        state.userProfile = updatedProfile; // Keep local state in sync
+        state.userProfile = updatedProfile;
     }
-    // Optimistically allow the user to proceed even if the update fails
     return true;
 }
 
@@ -74,7 +71,6 @@ export function initFilterModule(callbacks) {
     bindFilterEventListeners();
     loadQuestionsForFiltering();
     state.callbacks.confirmGoBackToHome = callbacks.confirmGoBackToHome;
-     // Initialize the worker
     if (window.Worker) {
         docWorker = new Worker('./js/worker.js');
         docWorker.onmessage = (e) => {
@@ -129,14 +125,40 @@ function initializeTabs() {
     });
 }
 
-const applyAllFiltersDebounced = debounce(applyAllFilters, 300);
+const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
 
 function bindFilterEventListeners() {
     config.filterKeys.forEach(key => {
-        if (dom.filterElements[key].toggleBtn) {
-            setupMultiselect(key);
-        } else if (dom.filterElements[key].segmentedControl) {
-            setupSegmentedControl(key);
+        const el = dom.filterElements[key];
+        if (el.toggleBtn) {
+            el.toggleBtn.addEventListener('click', () => toggleDropdown(key));
+            // NEW: Add click listener to the whole list for delegation and improved UX
+            el.list.addEventListener('click', (e) => {
+                const item = e.target.closest('.multiselect-item');
+                if (item && !item.classList.contains('disabled')) {
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    if (checkbox && e.target.tagName !== 'INPUT') {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    // This is the only place we need to trigger the update
+                    applyFiltersAndUpdateUIDebounced();
+                    updateMultiselectToggleText(key);
+                }
+            });
+            el.searchInput.addEventListener('input', () => filterDropdownList(key));
+            document.addEventListener('click', (e) => {
+                if (!el.container || !el.container.contains(e.target)) {
+                    if (el.dropdown) el.dropdown.style.display = 'none';
+                }
+            });
+        } else if (el.segmentedControl) {
+            el.segmentedControl.addEventListener('click', (e) => {
+                const button = e.target.closest('.segmented-btn');
+                if (button) {
+                    button.classList.toggle('active');
+                    applyFiltersAndUpdateUIDebounced();
+                }
+            });
         }
     });
 
@@ -144,19 +166,31 @@ function bindFilterEventListeners() {
     dom.createPptBtn.addEventListener('click', createPPT);
     dom.createPdfBtn.addEventListener('click', createPDF);
     dom.downloadJsonBtn.addEventListener('click', downloadJSON);
-
-    dom.resetFiltersBtnQuiz.addEventListener('click', resetAllFilters);
-    dom.resetFiltersBtnPpt.addEventListener('click', resetAllFilters);
-    dom.resetFiltersBtnJson.addEventListener('click', resetAllFilters);
+    
+    const resetAndUpdate = () => {
+        resetAllFilters();
+        applyFiltersAndUpdateUI();
+    };
+    dom.resetFiltersBtnQuiz.addEventListener('click', resetAndUpdate);
+    dom.resetFiltersBtnPpt.addEventListener('click', resetAndUpdate);
+    dom.resetFiltersBtnJson.addEventListener('click', resetAndUpdate);
 
     dom.quickStartButtons.forEach(button => {
         button.addEventListener('click', () => handleQuickStart(button.dataset.preset));
+    });
+
+    dom.activeFiltersSummaryBar.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tag-close-btn')) {
+            const { key, value } = e.target.dataset;
+            removeFilter(key, value);
+        }
     });
 }
 
 async function loadQuestionsForFiltering() {
     if (state.allQuestionsMasterList.length > 0) {
-        populateFilterOptions();
+        // Data already loaded, just re-initialize the UI state
+        applyFiltersAndUpdateUI();
         return;
     }
     
@@ -165,10 +199,12 @@ async function loadQuestionsForFiltering() {
     try {
         const { data, error } = await supabase.from('questions').select('*').order('v1_id', { ascending: true });
         if (error) throw error;
-        // BUG FIX 2: The data from Supabase is already flat. Do not map and spread non-existent nested properties.
         state.allQuestionsMasterList = data;
-        populateFilterOptions();
-        applyAllFilters();
+        
+        buildClassificationHierarchy();
+        populateAllFiltersInitially();
+        applyFiltersAndUpdateUI(); // Run once to set initial counts and state
+
     } catch (error) {
         console.error('Error fetching questions:', error);
         dom.loadingText.textContent = 'Failed to load questions. Please refresh.';
@@ -180,7 +216,26 @@ async function loadQuestionsForFiltering() {
     }
 }
 
-function populateFilterOptions() {
+function buildClassificationHierarchy() {
+    const hierarchy = {};
+    state.allQuestionsMasterList.forEach(q => {
+        const { subject, topic, subTopic } = q;
+        if (!subject || !topic) return;
+
+        if (!hierarchy[subject]) {
+            hierarchy[subject] = {};
+        }
+        if (!hierarchy[subject][topic]) {
+            hierarchy[subject][topic] = new Set();
+        }
+        if (subTopic) {
+            hierarchy[subject][topic].add(subTopic);
+        }
+    });
+    classificationHierarchy = hierarchy;
+}
+
+function populateAllFiltersInitially() {
     const uniqueValues = {};
     config.filterKeys.forEach(key => uniqueValues[key] = new Map());
 
@@ -198,7 +253,7 @@ function populateFilterOptions() {
     });
 
     config.filterKeys.forEach(key => {
-        const sortedValues = new Map([...uniqueValues[key].entries()].sort((a, b) => a[0] > b[0] ? 1 : -1));
+        const sortedValues = new Map([...uniqueValues[key].entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
         const filterEl = dom.filterElements[key];
 
         if (filterEl.list) {
@@ -206,12 +261,13 @@ function populateFilterOptions() {
             sortedValues.forEach((count, value) => {
                 const item = document.createElement('div');
                 item.className = 'multiselect-item';
+                item.dataset.value = value;
                 item.innerHTML = `
                     <label>
                         <input type="checkbox" value="${value}" data-filter-key="${key}">
                         ${value}
                     </label>
-                    <span class="filter-option-count">${count}</span>`;
+                    <span class="filter-option-count">0</span>`;
                 filterEl.list.appendChild(item);
             });
         } else if (filterEl.segmentedControl) {
@@ -228,39 +284,155 @@ function populateFilterOptions() {
     });
 }
 
-function setupMultiselect(key) {
-    const el = dom.filterElements[key];
-    el.toggleBtn.addEventListener('click', () => toggleDropdown(key));
-    el.list.addEventListener('change', (e) => {
-        if (e.target.type === 'checkbox') {
-            updateSelectedFiltersFromUI();
-            applyAllFiltersDebounced();
-            updateMultiselectToggleText(key);
-        }
+
+function applyFiltersAndUpdateUI() {
+    updateSelectedFiltersFromUI();
+    
+    const selectedSubjects = state.selectedFilters.subject;
+    const availableTopics = new Set();
+    if (selectedSubjects.length > 0) {
+        selectedSubjects.forEach(subject => {
+            if (classificationHierarchy[subject]) {
+                Object.keys(classificationHierarchy[subject]).forEach(topic => availableTopics.add(topic));
+            }
+        });
+    }
+    updateDropdownOptions('topic', availableTopics, selectedSubjects.length > 0);
+
+    const selectedTopics = state.selectedFilters.topic;
+    const availableSubTopics = new Set();
+    if (selectedTopics.length > 0 && selectedSubjects.length > 0) {
+        selectedSubjects.forEach(subject => {
+            if (classificationHierarchy[subject]) {
+                selectedTopics.forEach(topic => {
+                    if (classificationHierarchy[subject][topic]) {
+                        classificationHierarchy[subject][topic].forEach(subTopic => availableSubTopics.add(subTopic));
+                    }
+                });
+            }
+        });
+    }
+    updateDropdownOptions('subTopic', availableSubTopics, selectedTopics.length > 0);
+
+    config.filterKeys.forEach(key => {
+        const tempFilters = { ...state.selectedFilters };
+        delete tempFilters[key];
+
+        const relevantQuestions = filterQuestions(state.allQuestionsMasterList, tempFilters);
+        const counts = new Map();
+        relevantQuestions.forEach(q => {
+            const value = q[key];
+             if (key === 'tags' && Array.isArray(value)) {
+                value.forEach(tag => counts.set(tag, (counts.get(tag) || 0) + 1));
+            } else if (value) {
+                counts.set(String(value), (counts.get(String(value)) || 0) + 1);
+            }
+        });
+        updateCountUI(key, counts);
     });
-    el.searchInput.addEventListener('input', () => filterDropdownList(key));
-    document.addEventListener('click', (e) => {
-        if (!el.container || !el.container.contains(e.target)) {
-            if (el.dropdown) el.dropdown.style.display = 'none';
-        }
-    });
+
+    const finalFilteredList = filterQuestions(state.allQuestionsMasterList, state.selectedFilters);
+    state.filteredQuestionsMasterList = finalFilteredList;
+    updateQuestionCount(finalFilteredList.length);
+    updateActiveFiltersSummary();
 }
 
-function setupSegmentedControl(key) {
-    const el = dom.filterElements[key];
-    el.segmentedControl.addEventListener('click', (e) => {
-        const button = e.target.closest('.segmented-btn');
-        if (button) {
-            button.classList.toggle('active');
-            updateSelectedFiltersFromUI();
-            applyAllFiltersDebounced();
+function updateDropdownOptions(key, availableOptionsSet, isParentSelected) {
+    const filterEl = dom.filterElements[key];
+    if (!filterEl || !filterEl.list) return;
+
+    const items = filterEl.list.querySelectorAll('.multiselect-item');
+    let hasSelectionChanged = false;
+
+    items.forEach(item => {
+        const value = item.dataset.value;
+        const checkbox = item.querySelector('input');
+        if (availableOptionsSet.has(value) || !isParentSelected) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+            if (checkbox && checkbox.checked) {
+                checkbox.checked = false;
+                hasSelectionChanged = true;
+            }
         }
+    });
+
+    if (hasSelectionChanged) {
+        updateSelectedFiltersFromUI();
+        updateMultiselectToggleText(key);
+    }
+    
+    if (filterEl.toggleBtn) {
+        filterEl.toggleBtn.disabled = !isParentSelected;
+        if (!isParentSelected) {
+            const keyName = key.replace(/([A-Z])/g, ' $1');
+            filterEl.toggleBtn.textContent = `Select ${keyName}s`;
+        }
+    }
+}
+
+function updateCountUI(key, countsMap) {
+    const filterEl = dom.filterElements[key];
+    if (!filterEl) return;
+    
+    if (filterEl.list) {
+        const items = filterEl.list.querySelectorAll('.multiselect-item');
+        items.forEach(item => {
+            const countEl = item.querySelector('.filter-option-count');
+            const value = item.dataset.value;
+            const count = countsMap.get(value) || 0;
+            if (countEl) countEl.textContent = count;
+            
+            if (count === 0 && !item.querySelector('input').checked) {
+                item.classList.add('disabled');
+            } else {
+                item.classList.remove('disabled');
+            }
+        });
+    } else if (filterEl.segmentedControl) {
+        const buttons = filterEl.segmentedControl.querySelectorAll('.segmented-btn');
+        buttons.forEach(button => {
+            const countEl = button.querySelector('.filter-option-count');
+            const value = button.dataset.value;
+            const count = countsMap.get(value) || 0;
+            if (countEl) countEl.textContent = `(${count})`;
+
+            if (count === 0 && !button.classList.contains('active')) {
+                button.disabled = true;
+            } else {
+                button.disabled = false;
+            }
+        });
+    }
+}
+
+function filterQuestions(questions, filters) {
+    return questions.filter(q => {
+        for (const key in filters) {
+            const selected = filters[key];
+            if (selected.length === 0) continue;
+            
+            const questionValue = q[key];
+            if (key === 'tags' && Array.isArray(questionValue)) {
+                if (!selected.some(tag => questionValue.includes(tag))) {
+                    return false;
+                }
+            } else {
+                if (!selected.includes(String(questionValue))) {
+                    return false;
+                }
+            }
+        }
+        return true;
     });
 }
 
 function toggleDropdown(key) {
     const dropdown = dom.filterElements[key].dropdown;
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
 }
 
 function filterDropdownList(key) {
@@ -268,7 +440,9 @@ function filterDropdownList(key) {
     const filter = searchInput.value.toLowerCase();
     list.querySelectorAll('.multiselect-item').forEach(item => {
         const label = item.querySelector('label').textContent.toLowerCase();
-        item.style.display = label.includes(filter) ? '' : 'none';
+        // Keep item visible if its own label matches, or if it's currently selected
+        const isSelected = item.querySelector('input').checked;
+        item.style.display = (label.includes(filter) || isSelected) ? '' : 'none';
     });
 }
 
@@ -277,11 +451,15 @@ function updateSelectedFiltersFromUI() {
         state.selectedFilters[key] = [];
         const filterEl = dom.filterElements[key];
 
-        if (filterEl.list) { // Multiselect
+        if (filterEl.toggleBtn && filterEl.toggleBtn.disabled) {
+            return;
+        }
+
+        if (filterEl.list) {
             filterEl.list.querySelectorAll('input:checked').forEach(input => {
                 state.selectedFilters[key].push(input.value);
             });
-        } else if (filterEl.segmentedControl) { // Segmented Control
+        } else if (filterEl.segmentedControl) {
             filterEl.segmentedControl.querySelectorAll('.segmented-btn.active').forEach(button => {
                 state.selectedFilters[key].push(button.dataset.value);
             });
@@ -289,33 +467,8 @@ function updateSelectedFiltersFromUI() {
     });
 }
 
-function applyAllFilters() {
-    let filtered = [...state.allQuestionsMasterList];
-    
-    config.filterKeys.forEach(key => {
-        const selected = state.selectedFilters[key];
-        if (selected.length > 0) {
-            filtered = filtered.filter(q => {
-                if (key === 'tags' && Array.isArray(q.tags)) {
-                    return selected.some(tag => q.tags.includes(tag));
-                }
-                return selected.includes(q[key]);
-            });
-        }
-    });
-
-    state.filteredQuestionsMasterList = filtered;
-    updateQuestionCount(filtered.length);
-    updateActiveFiltersSummary();
-}
-
 function updateQuestionCount(count) {
-    const countElements = [
-        dom.questionCount, 
-        dom.pptQuestionCount, 
-        dom.pdfQuestionCount, 
-        dom.jsonQuestionCount
-    ];
+    const countElements = [dom.questionCount, dom.pptQuestionCount, dom.pdfQuestionCount, dom.jsonQuestionCount];
     countElements.forEach(el => {
         if (el) {
             el.textContent = count;
@@ -331,10 +484,12 @@ function updateQuestionCount(count) {
 
 function updateMultiselectToggleText(key) {
     const { toggleBtn } = dom.filterElements[key];
+    if (!toggleBtn) return;
     const selected = state.selectedFilters[key];
-    const keyName = key.replace(/([A-Z])/g, ' $1');
+    const keyName = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    
     if (selected.length === 0) {
-        toggleBtn.textContent = `Select ${keyName}s`;
+        toggleBtn.textContent = `Select ${keyName}`;
     } else if (selected.length === 1) {
         toggleBtn.textContent = selected[0];
     } else {
@@ -345,8 +500,8 @@ function updateMultiselectToggleText(key) {
 function updateActiveFiltersSummary() {
     dom.activeFiltersSummaryBar.innerHTML = '';
     let hasFilters = false;
-    for (const key in state.selectedFilters) {
-        if (state.selectedFilters[key].length > 0) {
+    config.filterKeys.forEach(key => {
+        if (state.selectedFilters[key] && state.selectedFilters[key].length > 0) {
             hasFilters = true;
             state.selectedFilters[key].forEach(value => {
                 const tag = document.createElement('div');
@@ -355,28 +510,20 @@ function updateActiveFiltersSummary() {
                 dom.activeFiltersSummaryBar.appendChild(tag);
             });
         }
-    }
-    dom.activeFiltersSummaryBarContainer.style.display = hasFilters ? 'block' : 'none';
-
-    dom.activeFiltersSummaryBar.querySelectorAll('.tag-close-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const { key, value } = e.target.dataset;
-            removeFilter(key, value);
-        });
     });
+    dom.activeFiltersSummaryBarContainer.style.display = hasFilters ? 'block' : 'none';
 }
 
 function removeFilter(key, value) {
     const filterEl = dom.filterElements[key];
     if (filterEl.list) {
-        const checkbox = filterEl.list.querySelector(`input[value="${value}"]`);
+        const checkbox = filterEl.list.querySelector(`input[value="${CSS.escape(value)}"]`);
         if (checkbox) checkbox.checked = false;
     } else if (filterEl.segmentedControl) {
-        const button = filterEl.segmentedControl.querySelector(`[data-value="${value}"]`);
+        const button = filterEl.segmentedControl.querySelector(`[data-value="${CSS.escape(value)}"]`);
         if (button) button.classList.remove('active');
     }
-    updateSelectedFiltersFromUI();
-    applyAllFiltersDebounced();
+    applyFiltersAndUpdateUIDebounced();
     updateMultiselectToggleText(key);
 }
 
@@ -391,32 +538,31 @@ function resetAllFilters() {
             filterEl.segmentedControl.querySelectorAll('.active').forEach(button => button.classList.remove('active'));
         }
     });
-    applyAllFilters();
 }
 
 function handleQuickStart(preset) {
     resetAllFilters();
-    state.selectedFilters['difficulty'] = [];
-    switch (preset) {
-        case 'quick_25_easy': state.selectedFilters['difficulty'].push('Easy'); break;
-        case 'quick_25_moderate': state.selectedFilters['difficulty'].push('Medium'); break;
-        case 'quick_25_hard': state.selectedFilters['difficulty'].push('Hard'); break;
-        case 'quick_25_mix': break;
+    if (preset !== 'quick_25_mix') {
+        const difficultyMap = {
+            'quick_25_easy': 'Easy',
+            'quick_25_moderate': 'Medium',
+            'quick_25_hard': 'Hard'
+        };
+        const difficulty = difficultyMap[preset];
+        const btn = dom.filterElements['difficulty'].segmentedControl.querySelector(`[data-value="${difficulty}"]`);
+        if (btn) btn.classList.add('active');
     }
     
-    dom.filterElements['difficulty'].segmentedControl.querySelectorAll('.active').forEach(btn => btn.classList.remove('active'));
-    state.selectedFilters['difficulty'].forEach(val => {
-        const btn = dom.filterElements['difficulty'].segmentedControl.querySelector(`[data-value="${val}"]`);
-        if (btn) btn.classList.add('active');
-    });
+    applyFiltersAndUpdateUI();
 
-    applyAllFilters();
-    let questionsForQuiz = [...state.filteredQuestionsMasterList];
-    if (questionsForQuiz.length > 25) {
-        shuffleArray(questionsForQuiz);
-        state.filteredQuestionsMasterList = questionsForQuiz.slice(0, 25);
-    }
-    startQuiz(true);
+    setTimeout(() => {
+        let questionsForQuiz = [...state.filteredQuestionsMasterList];
+        if (questionsForQuiz.length > 25) {
+            shuffleArray(questionsForQuiz);
+            state.filteredQuestionsMasterList = questionsForQuiz.slice(0, 25);
+        }
+        startQuiz(true);
+    }, 250);
 }
 
 async function startQuiz(isQuickStart = false) {
