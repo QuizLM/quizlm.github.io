@@ -1215,6 +1215,7 @@ body[data-theme='dark'] .quick-start-section h3 {
 }
 
 /* === UI FIX: Make filter rows clickable and prevent text wrapping === */
+/* === REVERTED TO OLD, WORKING STYLES === */
 .multiselect-item {
     display: flex;
     align-items: center;
@@ -1226,16 +1227,6 @@ body[data-theme='dark'] .quick-start-section h3 {
     font-size: 0.95em;
     border-radius: 4px;
 }
-
-.multiselect-item label {
-    flex-grow: 1; /* Makes the label take up all available space */
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    word-break: break-word;
-    margin-right: 8px; /* Space between text and count */
-}
-
 .multiselect-item.disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -1251,7 +1242,6 @@ body[data-theme='dark'] .quick-start-section h3 {
 .multiselect-item input[type="checkbox"] {
     margin-right: 10px;
     cursor: pointer;
-    flex-shrink: 0;
 }
 .multiselect-item.disabled input[type="checkbox"] {
     cursor: not-allowed;
@@ -1261,11 +1251,11 @@ body[data-theme='dark'] .quick-start-section h3 {
     font-size: 0.9em;
     color: var(--text-color-light);
     font-weight: 500;
-    flex-shrink: 0; /* Prevent the count from wrapping to a new line */
-    background-color: var(--settings-header-bg);
-    padding: 2px 8px;
-    border-radius: 10px;
 }
+.multiselect-item.disabled .filter-option-count {
+    color: var(--text-color-light);
+}
+/* === END OF REVERTED STYLES === */
 /* === END UI FIX === */
 
 .multiselect-item.disabled .filter-option-count {

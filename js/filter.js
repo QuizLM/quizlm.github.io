@@ -127,67 +127,41 @@ function initializeTabs() {
 
 const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
 // In js/filter.js - PASTE THIS CLEAN VERSION BACK IN
-
+// THE NEW, CORRECT bindFilterEventListeners FUNCTION
 function bindFilterEventListeners() {
-    if (areFilterListenersBound) {
-        return;
-    }
-
     config.filterKeys.forEach(key => {
         const el = dom.filterElements[key];
-        
-        if (el && el.toggleBtn) {
-            el.toggleBtn.addEventListener('click', (event) => {
-                event.stopPropagation();
-                toggleDropdown(key);
-            });
+        if (el.toggleBtn) {
+            // KEEP: This handles opening/closing the dropdown
+            el.toggleBtn.addEventListener('click', () => toggleDropdown(key));
             
-            el.list.addEventListener('click', (e) => {
-                const item = e.target.closest('.multiselect-item');
-                if (item && !item.classList.contains('disabled')) {
-                    const checkbox = item.querySelector('input[type="checkbox"]');
-                    if (checkbox) {
-            // If the click came from OUTSIDE the label (e.g., the count or empty space),
-            // we need to toggle the checkbox manually.
-            // If the click was INSIDE the label, we let the browser handle it automatically
-            // to prevent the "double toggle" bug.
-            if (!e.target.closest('label')) {
-                checkbox.checked = !checkbox.checked;
-            }
-        }
-        // This part remains the same, as it correctly updates the UI after any change.
-                    applyFiltersAndUpdateUIDebounced();
-                    updateMultiselectToggleText(key);
-                }
-            });
+            // REMOVED: The buggy el.list.addEventListener('click', ...) block is gone.
+
+            // KEEP: This handles the search functionality
             el.searchInput.addEventListener('input', () => filterDropdownList(key));
 
-        } else if (el && el.segmentedControl) {
-            el.segmentedControl.addEventListener('click', (e) => {
-                const button = e.target.closest('.segmented-btn');
-                if (button) {
-                    button.classList.toggle('active');
-                    applyFiltersAndUpdateUIDebounced();
+            // KEEP: This handles closing the dropdown when clicking elsewhere
+            document.addEventListener('click', (e) => {
+                if (!el.container || !el.container.contains(e.target)) {
+                    if (el.dropdown) el.dropdown.style.display = 'none';
                 }
             });
+        } else if (el.segmentedControl) {
+            // REMOVED: The buggy el.segmentedControl.addEventListener('click', ...) block is gone.
         }
     });
 
-    document.addEventListener('click', (e) => {
-        config.filterKeys.forEach(key => {
-            const el = dom.filterElements[key];
-            if (el && el.container && !el.container.contains(e.target)) {
-                if (el.dropdown) el.dropdown.style.display = 'none';
-            }
-        });
-    });
-    
+    // --- All the other event listeners remain exactly the same ---
     dom.startQuizBtn.addEventListener('click', startQuiz);
     dom.createPptBtn.addEventListener('click', createPPT);
     dom.createPdfBtn.addEventListener('click', createPDF);
     dom.downloadJsonBtn.addEventListener('click', downloadJSON);
     
-    const resetAndUpdate = () => { resetAllFilters(); applyFiltersAndUpdateUI(); };
+    const resetAndUpdate = () => {
+        resetAllFilters();
+        // Use our new orchestrator function
+        onFilterStateChange(); 
+    };
     dom.resetFiltersBtnQuiz.addEventListener('click', resetAndUpdate);
     dom.resetFiltersBtnPpt.addEventListener('click', resetAndUpdate);
     dom.resetFiltersBtnJson.addEventListener('click', resetAndUpdate);
@@ -202,15 +176,7 @@ function bindFilterEventListeners() {
             removeFilter(key, value);
         }
     });
-
-    areFilterListenersBound = true;
 }
-
-
-// In js/filter.js
-
-
-// In js/filter.js
 
 // In your NEW js/filter.js file
 
@@ -234,14 +200,17 @@ function toggleDropdown(key) {
     }
 }
 
+// This is the CORRECT loadQuestionsForFiltering function to use
 async function loadQuestionsForFiltering() {
     if (state.allQuestionsMasterList.length > 0) {
-        applyFiltersAndUpdateUI();
+        // If data is already here, just refresh the UI
+        populateFilterControls();
+        onFilterStateChange();
         return;
     }
     
     dom.loadingOverlay.style.display = 'flex';
-    dom.loadingText.textContent = 'Where vision meets the matrix...';
+    dom.loadingText.textContent = 'Loading question bank from Supabase...';
     try {
         const { data, error } = await supabase
             .from('questions')
@@ -251,9 +220,9 @@ async function loadQuestionsForFiltering() {
         if (error) throw error;
         state.allQuestionsMasterList = data;
         
-        buildClassificationHierarchy();
-        populateAllFiltersInitially();
-        applyFiltersAndUpdateUI(); 
+        // --- Call our new, reliable functions ---
+        populateFilterControls();
+        onFilterStateChange(); 
 
     } catch (error) {
         console.error('Error fetching questions:', error);
@@ -285,53 +254,131 @@ function buildClassificationHierarchy() {
     classificationHierarchy = hierarchy;
 }
 
-function populateAllFiltersInitially() {
-    const uniqueValues = {};
-    config.filterKeys.forEach(key => uniqueValues[key] = new Map());
+ // NEW: Replaces populateAllFiltersInitially with the old, robust logic
+function populateFilterControls() {
+    const questions = state.allQuestionsMasterList;
+    const unique = {
+        subject: new Set(), topic: new Set(), subTopic: new Set(),
+        difficulty: new Set(), questionType: new Set(),
+        examName: new Set(), examYear: new Set(), tags: new Set()
+    };
 
-    state.allQuestionsMasterList.forEach(q => {
+    questions.forEach(q => {
         config.filterKeys.forEach(key => {
-            let value = q[key];
+            const value = q[key];
             if (key === 'tags' && Array.isArray(value)) {
-                value.forEach(tag => {
-                    uniqueValues.tags.set(tag, (uniqueValues.tags.get(tag) || 0) + 1);
-                });
+                value.forEach(tag => unique.tags.add(tag));
             } else if (value) {
-                uniqueValues[key].set(value, (uniqueValues[key].get(value) || 0) + 1);
+                unique[key].add(value);
             }
         });
     });
 
-    config.filterKeys.forEach(key => {
-        const sortedValues = new Map([...uniqueValues[key].entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
-        const filterEl = dom.filterElements[key];
+    // This function now handles the HTML creation
+    const populateMultiSelect = (filterKey, options) => {
+        const listElement = dom.filterElements[filterKey]?.list;
+        if (!listElement) return;
 
-        if (filterEl.list) {
-            filterEl.list.innerHTML = '';
-            sortedValues.forEach((count, value) => {
-                const item = document.createElement('div');
-                item.className = 'multiselect-item';
-                item.dataset.value = value;
-                item.innerHTML = `
-                    <label>
-                        <input type="checkbox" value="${value}" data-filter-key="${key}">
-                        ${value}
-                    </label>
-                    <span class="filter-option-count">0</span>`;
-                filterEl.list.appendChild(item);
-            });
-        } else if (filterEl.segmentedControl) {
-            filterEl.segmentedControl.innerHTML = '';
-            sortedValues.forEach((count, value) => {
-                const button = document.createElement('button');
-                button.className = 'segmented-btn';
-                button.dataset.value = value;
-                button.dataset.filterKey = key;
-                button.innerHTML = `${value} <span class="filter-option-count">(${count})</span>`;
-                filterEl.segmentedControl.appendChild(button);
-            });
-        }
+        listElement.innerHTML = '';
+        options.forEach(opt => {
+            // This creates a <label> that wraps the entire row, which is the key to the fix.
+            const label = document.createElement('label');
+            label.className = 'multiselect-item';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = opt;
+            // The onchange handler is the correct, simple way to handle clicks
+            checkbox.onchange = () => handleSelectionChange(filterKey, opt);
+            
+            const text = document.createElement('span');
+            text.textContent = opt;
+
+            const countSpan = document.createElement('span');
+            countSpan.className = 'filter-option-count';
+
+            label.appendChild(checkbox);
+            label.appendChild(text);
+            label.appendChild(countSpan);
+            listElement.appendChild(label);
+        });
+    };
+    
+    populateMultiSelect('subject', [...unique.subject].sort());
+    
+    // Disable dependent dropdowns initially
+    dom.filterElements.topic.toggleBtn.disabled = true;
+    dom.filterElements.topic.toggleBtn.textContent = "Select a Subject first";
+    dom.filterElements.subTopic.toggleBtn.disabled = true;
+    dom.filterElements.subTopic.toggleBtn.textContent = "Select a Topic first";
+
+    populateMultiSelect('examName', [...unique.examName].sort());
+    populateMultiSelect('examYear', [...unique.examYear].sort((a,b) => b-a));
+    populateMultiSelect('tags', [...unique.tags].sort());
+    populateSegmentedControl('difficulty', [...unique.difficulty].sort());
+    populateSegmentedControl('questionType', [...unique.questionType].sort());
+}
+
+// NEW: Helper function from old logic
+function populateSegmentedControl(filterKey, options) {
+    const container = dom.filterElements[filterKey]?.segmentedControl;
+    if (!container) return;
+    container.innerHTML = '';
+    options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'segmented-btn';
+        btn.dataset.value = opt;
+        // The onchange handler for segmented buttons is a direct click
+        btn.onclick = () => handleSelectionChange(filterKey, opt);
+        
+        const text = document.createElement('span');
+        text.textContent = opt;
+        
+        const countSpan = document.createElement('span');
+        countSpan.className = 'filter-option-count';
+
+        btn.appendChild(text);
+        btn.appendChild(countSpan);
+        container.appendChild(btn);
     });
+}
+
+// NEW: The core event handler from the old, working logic
+function handleSelectionChange(filterKey, value) {
+    const selectedValues = state.selectedFilters[filterKey];
+    
+    // Special handling for segmented controls (single-select behavior within their group)
+    if (dom.filterElements[filterKey].segmentedControl) {
+        const index = selectedValues.indexOf(value);
+        if (index > -1) {
+            selectedValues.splice(index, 1); // Deselect if clicked again
+        } else {
+            selectedValues.push(value); // Select
+        }
+    } else { // Standard multi-select for dropdowns
+        const index = selectedValues.indexOf(value);
+        if (index > -1) {
+            selectedValues.splice(index, 1);
+        } else {
+            selectedValues.push(value);
+        }
+    }
+
+    if (filterKey === 'subject') {
+        state.selectedFilters.topic = [];
+        state.selectedFilters.subTopic = [];
+    } else if (filterKey === 'topic') {
+        state.selectedFilters.subTopic = [];
+    }
+
+    onFilterStateChange();
+}
+
+// NEW: The main orchestrator function from the old logic
+function onFilterStateChange() {
+    updateDependentFilters();
+    applyFiltersAndUpdateUI(); // We'll keep the new name for the main filter/update function
+    updateActiveFiltersSummary();
 }
 
 
