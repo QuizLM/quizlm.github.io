@@ -207,7 +207,6 @@ function bindFilterEventListeners() {
 
 // --- REPLACE with this DEBUGGER version ---
 function toggleDropdown(key) {
-    debugger; // <-- THIS IS THE CRUCIAL LINE
 
     // This part closes all OTHER dropdowns first
     config.filterKeys.forEach(otherKey => {
