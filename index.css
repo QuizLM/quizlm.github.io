@@ -1186,7 +1186,7 @@ body[data-theme='dark'] .quick-start-section h3 {
     border-radius: 6px;
     box-shadow: 0 4px 15px var(--shadow-color);
     z-index: 100;
-     max-height: 250px !important; /* <-- ADD !important HERE */
+     max-height: 250px 
     display: flex;
     flex-direction: column;
 }

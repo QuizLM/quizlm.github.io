@@ -146,9 +146,16 @@ function bindFilterEventListeners() {
                 const item = e.target.closest('.multiselect-item');
                 if (item && !item.classList.contains('disabled')) {
                     const checkbox = item.querySelector('input[type="checkbox"]');
-                    if (checkbox && e.target.tagName !== 'INPUT') {
-                        checkbox.checked = !checkbox.checked;
-                    }
+                    if (checkbox) {
+            // If the click came from OUTSIDE the label (e.g., the count or empty space),
+            // we need to toggle the checkbox manually.
+            // If the click was INSIDE the label, we let the browser handle it automatically
+            // to prevent the "double toggle" bug.
+            if (!e.target.closest('label')) {
+                checkbox.checked = !checkbox.checked;
+            }
+        }
+        // This part remains the same, as it correctly updates the UI after any change.
                     applyFiltersAndUpdateUIDebounced();
                     updateMultiselectToggleText(key);
                 }
