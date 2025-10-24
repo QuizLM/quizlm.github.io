@@ -200,22 +200,27 @@ function populateFilterControls() {
 }
 
 // Event handler for any selection change
+// This is the new, corrected code for handleSelectionChange
+
 function handleSelectionChange(filterKey, value) {
     const selectedValues = state.selectedFilters[filterKey];
     
+    // Convert the incoming value to a string to ensure consistency
+    const stringValue = String(value);
+
     if (dom.filterElements[filterKey].segmentedControl) {
-        const index = selectedValues.indexOf(value);
+        const index = selectedValues.indexOf(stringValue);
         if (index > -1) {
             selectedValues.splice(index, 1);
         } else {
-            selectedValues.push(value);
+            selectedValues.push(stringValue); // <-- FIXED
         }
     } else {
-        const index = selectedValues.indexOf(value);
+        const index = selectedValues.indexOf(stringValue);
         if (index > -1) {
             selectedValues.splice(index, 1);
         } else {
-            selectedValues.push(value);
+            selectedValues.push(stringValue); // <-- FIXED
         }
     }
 
