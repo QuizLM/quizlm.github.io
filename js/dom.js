@@ -209,4 +209,3 @@ export function cacheDomElements() {
      // ADD THIS LINE FOR DEBUGGING
     console.log('Debug Check: Is the Subject toggle button being found?', dom.filterElements.subject.toggleBtn);
 }
-}
