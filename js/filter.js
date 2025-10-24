@@ -381,6 +381,55 @@ function onFilterStateChange() {
     updateActiveFiltersSummary();
 }
 
+// ADD THIS ENTIRE MISSING FUNCTION TO filter.js
+
+function updateDependentFilters() {
+    const { subject: selectedSubjects, topic: selectedTopics } = state.selectedFilters;
+    const { topic: topicElements, subTopic: subTopicElements } = dom.filterElements;
+
+    // This function is a helper to repopulate a dropdown's options
+    const updateMultiSelectWithOptions = (filterKey, options) => {
+        const { list, toggleBtn } = dom.filterElements[filterKey];
+        if (!list || !toggleBtn) return;
+        
+        // Use the same robust populateMultiSelect logic we already have
+        populateMultiSelect(filterKey, options);
+    };
+
+    // --- Topic depends on Subject ---
+    if (selectedSubjects.length === 0) {
+        topicElements.toggleBtn.disabled = true;
+        topicElements.toggleBtn.textContent = "Select a Subject first";
+        topicElements.list.innerHTML = '';
+    } else {
+        topicElements.toggleBtn.disabled = false;
+        const relevantTopics = new Set();
+        state.allQuestionsMasterList.forEach(q => {
+            if (q.subject && selectedSubjects.includes(q.subject) && q.topic) {
+                relevantTopics.add(q.topic);
+            }
+        });
+        updateMultiSelectWithOptions('topic', [...relevantTopics].sort());
+    }
+
+    // --- Sub-Topic depends on Topic ---
+    if (selectedTopics.length === 0) {
+        subTopicElements.toggleBtn.disabled = true;
+        subTopicElements.toggleBtn.textContent = "Select a Topic first";
+        subTopicElements.list.innerHTML = '';
+    } else {
+        subTopicElements.toggleBtn.disabled = false;
+        const relevantSubTopics = new Set();
+        state.allQuestionsMasterList.forEach(q => {
+            if (q.subject && selectedSubjects.includes(q.subject) &&
+                q.topic && selectedTopics.includes(q.topic) &&
+                q.subTopic) {
+                relevantSubTopics.add(q.subTopic);
+            }
+        });
+        updateMultiSelectWithOptions('subTopic', [...relevantSubTopics].sort());
+    }
+}
 
 function applyFiltersAndUpdateUI() {
     updateSelectedFiltersFromUI();
