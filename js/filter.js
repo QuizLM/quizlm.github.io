@@ -126,10 +126,9 @@ function initializeTabs() {
 }
 
 const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
-// In js/filter.js
 
+// --- NEW, ROBUST version of bindFilterEventListeners ---
 function bindFilterEventListeners() {
-    // This flag check ensures this entire setup runs only ONCE.
     if (areFilterListenersBound) {
         return;
     }
@@ -137,13 +136,16 @@ function bindFilterEventListeners() {
     config.filterKeys.forEach(key => {
         const el = dom.filterElements[key];
         
-        // This is for dropdowns like Subject, Topic, etc.
         if (el && el.toggleBtn) {
-            el.toggleBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevents the document click listener from firing immediately
+            el.toggleBtn.addEventListener('click', (event) => {
+                // This log will tell us exactly which button was clicked and which 'key' the listener has.
+                console.log(`Click event fired. Listener key: '${key}'. Clicked button ID: '${event.currentTarget.id}'`);
+                
+                event.stopPropagation();
                 toggleDropdown(key);
             });
             
+            // Re-add the other listeners that were removed
             el.list.addEventListener('click', (e) => {
                 const item = e.target.closest('.multiselect-item');
                 if (item && !item.classList.contains('disabled')) {
@@ -155,11 +157,9 @@ function bindFilterEventListeners() {
                     updateMultiselectToggleText(key);
                 }
             });
-
             el.searchInput.addEventListener('input', () => filterDropdownList(key));
-        } 
-        // This is for segmented buttons like Difficulty
-        else if (el && el.segmentedControl) {
+
+        } else if (el && el.segmentedControl) {
             el.segmentedControl.addEventListener('click', (e) => {
                 const button = e.target.closest('.segmented-btn');
                 if (button) {
@@ -170,7 +170,7 @@ function bindFilterEventListeners() {
         }
     });
 
-    // Close dropdowns if clicking outside
+    // Re-add the other listeners that were removed
     document.addEventListener('click', (e) => {
         config.filterKeys.forEach(key => {
             const el = dom.filterElements[key];
@@ -179,28 +179,21 @@ function bindFilterEventListeners() {
             }
         });
     });
-
-    // Main action buttons
+    
     dom.startQuizBtn.addEventListener('click', startQuiz);
     dom.createPptBtn.addEventListener('click', createPPT);
     dom.createPdfBtn.addEventListener('click', createPDF);
     dom.downloadJsonBtn.addEventListener('click', downloadJSON);
     
-    // Reset buttons
-    const resetAndUpdate = () => {
-        resetAllFilters();
-        applyFiltersAndUpdateUI();
-    };
+    const resetAndUpdate = () => { resetAllFilters(); applyFiltersAndUpdateUI(); };
     dom.resetFiltersBtnQuiz.addEventListener('click', resetAndUpdate);
     dom.resetFiltersBtnPpt.addEventListener('click', resetAndUpdate);
     dom.resetFiltersBtnJson.addEventListener('click', resetAndUpdate);
 
-    // Quick start buttons
     dom.quickStartButtons.forEach(button => {
         button.addEventListener('click', () => handleQuickStart(button.dataset.preset));
     });
 
-    // Active filter summary bar for removing tags
     dom.activeFiltersSummaryBar.addEventListener('click', (e) => {
         if (e.target.classList.contains('tag-close-btn')) {
             const { key, value } = e.target.dataset;
@@ -208,7 +201,6 @@ function bindFilterEventListeners() {
         }
     });
 
-    // This flag is set at the very end to confirm all listeners are attached.
     areFilterListenersBound = true;
     console.log("Filter event listeners have been successfully bound ONCE.");
 }
@@ -461,12 +453,29 @@ function filterQuestions(questions, filters) {
 }
 
 // In js/filter.js
+
+// --- NEW DEBUGGING VERSION of toggleDropdown ---
 function toggleDropdown(key) {
+    console.log(`SUCCESS: toggleDropdown EXECUTED for key: '${key}'`); // Log execution
+    
+    // This part closes all OTHER dropdowns first
+    config.filterKeys.forEach(otherKey => {
+        if (otherKey !== key) {
+            const el = dom.filterElements[otherKey];
+            if (el && el.dropdown) {
+                el.dropdown.style.display = 'none';
+            }
+        }
+    });
+
+    // This part toggles the one you clicked
     const dropdown = dom.filterElements[key].dropdown;
     if (dropdown) {
         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
     }
 }
+
+
 
 function filterDropdownList(key) {
     const { searchInput, list } = dom.filterElements[key];
