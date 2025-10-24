@@ -468,10 +468,24 @@ function filterQuestions(questions, filters) {
     });
 }
 
+
+// --- REPLACE your toggleDropdown function with this CORRECTED version ---
 function toggleDropdown(key) {
+    // This part closes all OTHER dropdowns first, which is a good feature from our recent attempts.
+    config.filterKeys.forEach(otherKey => {
+        if (otherKey !== key) {
+            const el = dom.filterElements[otherKey];
+            if (el && el.dropdown) {
+                el.dropdown.style.display = 'none';
+            }
+        }
+    });
+
+    // This part toggles the one you clicked, using the CORRECT display property.
     const dropdown = dom.filterElements[key].dropdown;
     if (dropdown) {
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        // Use 'flex' to match the CSS, not 'block'.
+        dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
     }
 }
 
