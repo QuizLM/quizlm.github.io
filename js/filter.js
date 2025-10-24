@@ -7,7 +7,7 @@ import * as auth from './auth.js';
 let appCallbacks = {};
 let docWorker = null;
 let classificationHierarchy = {}; // To store subject -> topic -> subTopic relations
-
+let areFilterListenersBound = false; // <-- ADD THIS LINE
 /**
  * Triggers a "pop" animation on a given element to provide visual feedback.
  * @param {HTMLElement} element The element to animate.
@@ -128,17 +128,14 @@ function initializeTabs() {
 const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
 
 function bindFilterEventListeners() {
+      if (areFilterListenersBound) return; // <-- ADD THIS LINE AT THE TOP
+
     config.filterKeys.forEach(key => {
         const el = dom.filterElements[key];
         if (el.toggleBtn) {
         // In js/filter.js, inside bindFilterEventListeners()
 
-// --- TEMPORARY CHANGE FOR DEBUGGING ---
-el.toggleBtn.addEventListener('click', () => {
-    console.log(`Click registered on button for key: '${key}'`); // <-- ADD THIS LINE
-    toggleDropdown(key);
-});
-// --- END OF TEMPORARY CHANGE ---
+
             
             el.list.addEventListener('click', (e) => {
                 const item = e.target.closest('.multiselect-item');
@@ -191,6 +188,7 @@ el.toggleBtn.addEventListener('click', () => {
             removeFilter(key, value);
         }
     });
+      areFilterListenersBound = true; // <-- ADD THIS LINE AT THE BOTTOM
 }
 
 async function loadQuestionsForFiltering() {
