@@ -203,7 +203,12 @@ function bindFilterEventListeners() {
 // In js/filter.js
 
 
+// In js/filter.js
+
+// --- REPLACE with this DEBUGGER version ---
 function toggleDropdown(key) {
+    debugger; // <-- THIS IS THE CRUCIAL LINE
+
     // This part closes all OTHER dropdowns first
     config.filterKeys.forEach(otherKey => {
         if (otherKey !== key) {
@@ -220,7 +225,6 @@ function toggleDropdown(key) {
         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
     }
 }
-
 
 async function loadQuestionsForFiltering() {
     if (state.allQuestionsMasterList.length > 0) {
