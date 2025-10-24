@@ -131,7 +131,14 @@ function bindFilterEventListeners() {
     config.filterKeys.forEach(key => {
         const el = dom.filterElements[key];
         if (el.toggleBtn) {
-            el.toggleBtn.addEventListener('click', () => toggleDropdown(key));
+        // In js/filter.js, inside bindFilterEventListeners()
+
+// --- TEMPORARY CHANGE FOR DEBUGGING ---
+el.toggleBtn.addEventListener('click', () => {
+    console.log(`Click registered on button for key: '${key}'`); // <-- ADD THIS LINE
+    toggleDropdown(key);
+});
+// --- END OF TEMPORARY CHANGE ---
             
             el.list.addEventListener('click', (e) => {
                 const item = e.target.closest('.multiselect-item');
