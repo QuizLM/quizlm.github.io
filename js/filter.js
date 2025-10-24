@@ -193,7 +193,7 @@ async function loadQuestionsForFiltering() {
     }
     
     dom.loadingOverlay.style.display = 'flex';
-    dom.loadingText.textContent = 'Loading question bank...';
+    dom.loadingText.textContent = 'Where vision meets the matrix...';
     try {
         const { data, error } = await supabase
             .from('questions')
