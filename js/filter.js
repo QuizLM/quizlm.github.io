@@ -126,53 +126,99 @@ function initializeTabs() {
 }
 
 const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
+// In js/filter.js - PASTE THIS CLEAN VERSION BACK IN
 
-// --- THIS IS THE UPDATED VERSION FOR DEBUGGING (Try #12) ---
 function bindFilterEventListeners() {
-    // This flag check is still important.
     if (areFilterListenersBound) {
         return;
     }
 
-    // --- START OF DIAGNOSTIC REPORT ---
-    console.log("--- Running DOM State Check inside bindFilterEventListeners ---");
-    
-    // We will loop through every filter key we expect to exist.
     config.filterKeys.forEach(key => {
-        // Get the collection of DOM elements for this specific key from our main 'dom' object.
         const el = dom.filterElements[key];
         
-        // Check 1: Does the main container for this filter key exist?
-        if (!el) {
-            console.error(`[CRITICAL FAILURE] For key '${key}', the entire 'dom.filterElements.${key}' object is missing!`);
-            return; // Stop processing this key if the whole object is missing.
-        }
-
-        // Check 2: If the container exists, does it have the 'toggleBtn' we need?
-        if (el.toggleBtn) {
-            // If it exists, this is a success. We log it and attach the listener.
-            console.log(`[SUCCESS] For key '${key}', found toggleBtn. Attaching listener. Element:`, el.toggleBtn);
-            
+        if (el && el.toggleBtn) {
             el.toggleBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
                 toggleDropdown(key);
             });
+            
+            el.list.addEventListener('click', (e) => {
+                const item = e.target.closest('.multiselect-item');
+                if (item && !item.classList.contains('disabled')) {
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    if (checkbox && e.target.tagName !== 'INPUT') {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    applyFiltersAndUpdateUIDebounced();
+                    updateMultiselectToggleText(key);
+                }
+            });
+            el.searchInput.addEventListener('input', () => filterDropdownList(key));
 
-        } else if (el.segmentedControl) {
-            // This is not an error, just a different type of filter (like 'Difficulty').
-            console.log(`[INFO] For key '${key}', found a segmentedControl, not a toggleBtn. Skipping dropdown listener attachment.`);
-
-        } else {
-            // If we expected a toggleBtn but didn't find one, this is a failure.
-            console.error(`[FAILURE] For key '${key}', the 'toggleBtn' property is missing or null!`, 'The "el" object for this key is:', el);
+        } else if (el && el.segmentedControl) {
+            el.segmentedControl.addEventListener('click', (e) => {
+                const button = e.target.closest('.segmented-btn');
+                if (button) {
+                    button.classList.toggle('active');
+                    applyFiltersAndUpdateUIDebounced();
+                }
+            });
         }
     });
 
-    console.log("--- DOM State Check Complete ---");
-    // --- END OF DIAGNOSTIC REPORT ---
+    document.addEventListener('click', (e) => {
+        config.filterKeys.forEach(key => {
+            const el = dom.filterElements[key];
+            if (el && el.container && !el.container.contains(e.target)) {
+                if (el.dropdown) el.dropdown.style.display = 'none';
+            }
+        });
+    });
+    
+    dom.startQuizBtn.addEventListener('click', startQuiz);
+    dom.createPptBtn.addEventListener('click', createPPT);
+    dom.createPdfBtn.addEventListener('click', createPDF);
+    dom.downloadJsonBtn.addEventListener('click', downloadJSON);
+    
+    const resetAndUpdate = () => { resetAllFilters(); applyFiltersAndUpdateUI(); };
+    dom.resetFiltersBtnQuiz.addEventListener('click', resetAndUpdate);
+    dom.resetFiltersBtnPpt.addEventListener('click', resetAndUpdate);
+    dom.resetFiltersBtnJson.addEventListener('click', resetAndUpdate);
 
-    // Set the flag at the end so this only runs once.
+    dom.quickStartButtons.forEach(button => {
+        button.addEventListener('click', () => handleQuickStart(button.dataset.preset));
+    });
+
+    dom.activeFiltersSummaryBar.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tag-close-btn')) {
+            const { key, value } = e.target.dataset;
+            removeFilter(key, value);
+        }
+    });
+
     areFilterListenersBound = true;
+}
+
+
+// In js/filter.js
+
+
+function toggleDropdown(key) {
+    // This part closes all OTHER dropdowns first
+    config.filterKeys.forEach(otherKey => {
+        if (otherKey !== key) {
+            const el = dom.filterElements[otherKey];
+            if (el && el.dropdown) {
+                el.dropdown.style.display = 'none';
+            }
+        }
+    });
+
+    // This part toggles the one you clicked
+    const dropdown = dom.filterElements[key].dropdown;
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
 }
 
 
@@ -421,17 +467,6 @@ function filterQuestions(questions, filters) {
         }
         return true;
     });
-}
-
-// In js/filter.js
-
-
-// --- THIS IS THE SIMPLE, ORIGINAL VERSION OF toggleDropdown  TRY#12---
-function toggleDropdown(key) {
-    const dropdown = dom.filterElements[key].dropdown;
-    if (dropdown) {
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-    }
 }
 
 
