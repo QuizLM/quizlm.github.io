@@ -438,13 +438,33 @@ function filterQuestions(questions, filters) {
     });
 }
 
+// In js/filter.js
+
+// --- TEMPORARY DEBUGGING VERSION ---
 function toggleDropdown(key) {
-    const dropdown = dom.filterElements[key].dropdown;
-    if (dropdown) {
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    console.log(`--- toggleDropdown called for key: '${key}' ---`);
+
+    const dropdownElement = dom.filterElements[key].dropdown;
+    console.log("1. Found dropdown element in dom object:", dropdownElement);
+
+    if (dropdownElement) {
+        const currentDisplay = dropdownElement.style.display;
+        console.log("2. Current 'style.display' value is:", `'${currentDisplay}'`);
+
+        const newDisplay = currentDisplay === 'block' ? 'none' : 'block';
+        console.log("3. Attempting to set 'style.display' to:", `'${newDisplay}'`);
+
+        dropdownElement.style.display = newDisplay;
+
+        // This is the most important check. What is the style immediately after we set it?
+        console.log("4. After setting, 'style.display' is now:", `'${dropdownElement.style.display}'`);
+        console.log("------------------------------------------");
+    } else {
+        console.error("CRITICAL: Could not find the dropdown element in the DOM object for key:", key);
+        console.log("------------------------------------------");
     }
 }
-
+// --- END OF DEBUGGING VERSION ---
 function filterDropdownList(key) {
     const { searchInput, list } = dom.filterElements[key];
     const filter = searchInput.value.toLowerCase();
