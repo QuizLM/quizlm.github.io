@@ -975,6 +975,7 @@ body[data-theme='dark'] .quick-start-section h3 {
 
 .filter-control {
     margin-bottom: 15px;
+     position: relative; /* ADD THIS LINE */
 }
 
 .filter-control:last-child {
