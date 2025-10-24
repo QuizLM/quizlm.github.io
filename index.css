@@ -95,7 +95,7 @@ body {
     justify-content: center;
     align-items: center;
     position: relative;
-    overflow-x: hidden;
+    overflow-x: visible; /* FIX #1: Change hidden to visible */
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -957,6 +957,7 @@ body[data-theme='dark'] .quick-start-section h3 {
     padding: 20px;
     border: 1px solid var(--border-color);
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+     position: relative; /* FIX #2: Add this line */
 }
 
 .filter-group h3 {
