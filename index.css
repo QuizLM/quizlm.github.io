@@ -1210,6 +1210,7 @@ body[data-theme='dark'] .quick-start-section h3 {
     padding: 5px;
 }
 
+/* === UI FIX: Make filter rows clickable and prevent text wrapping === */
 .multiselect-item {
     display: flex;
     align-items: center;
@@ -1223,11 +1224,10 @@ body[data-theme='dark'] .quick-start-section h3 {
 }
 
 .multiselect-item label {
-    flex-grow: 1;
+    flex-grow: 1; /* Makes the label take up all available space */
     display: flex;
     align-items: center;
     cursor: pointer;
-    /* Allow the label to wrap if needed, but flexbox will handle alignment */
     word-break: break-word;
     margin-right: 8px; /* Space between text and count */
 }
@@ -1257,11 +1257,12 @@ body[data-theme='dark'] .quick-start-section h3 {
     font-size: 0.9em;
     color: var(--text-color-light);
     font-weight: 500;
-    flex-shrink: 0; /* Prevent the count from wrapping */
+    flex-shrink: 0; /* Prevent the count from wrapping to a new line */
     background-color: var(--settings-header-bg);
     padding: 2px 8px;
     border-radius: 10px;
 }
+/* === END UI FIX === */
 
 .multiselect-item.disabled .filter-option-count {
     color: var(--text-color-light);
@@ -1333,7 +1334,14 @@ body[data-theme='dark'] .tag-close-btn {
     color: var(--button-text-color);
     border-color: var(--primary-dark);
     font-weight: 600;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); /* UI FIX: Better active state */
 }
+
+/* UI FIX: Improved dark mode contrast for active segmented button */
+body[data-theme='dark'] .segmented-btn.active {
+    color: #111827;
+}
+
 .segmented-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -1347,6 +1355,9 @@ body[data-theme='dark'] .tag-close-btn {
 }
 .segmented-btn.active .filter-option-count {
     color: rgba(255, 255, 255, 0.8);
+}
+body[data-theme='dark'] .segmented-btn.active .filter-option-count {
+    color: rgba(17, 24, 39, 0.8);
 }
 
 #active-filters-summary-bar-container {
