@@ -126,16 +126,23 @@ function initializeTabs() {
 }
 
 const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
+// In js/filter.js
 
 function bindFilterEventListeners() {
-      if (areFilterListenersBound) return; // <-- ADD THIS LINE AT THE TOP
+    // This flag check ensures this entire setup runs only ONCE.
+    if (areFilterListenersBound) {
+        return;
+    }
 
     config.filterKeys.forEach(key => {
         const el = dom.filterElements[key];
-        if (el.toggleBtn) {
-        // In js/filter.js, inside bindFilterEventListeners()
-
-
+        
+        // This is for dropdowns like Subject, Topic, etc.
+        if (el && el.toggleBtn) {
+            el.toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevents the document click listener from firing immediately
+                toggleDropdown(key);
+            });
             
             el.list.addEventListener('click', (e) => {
                 const item = e.target.closest('.multiselect-item');
@@ -148,13 +155,11 @@ function bindFilterEventListeners() {
                     updateMultiselectToggleText(key);
                 }
             });
+
             el.searchInput.addEventListener('input', () => filterDropdownList(key));
-            document.addEventListener('click', (e) => {
-                if (!el.container || !el.container.contains(e.target)) {
-                    if (el.dropdown) el.dropdown.style.display = 'none';
-                }
-            });
-        } else if (el.segmentedControl) {
+        } 
+        // This is for segmented buttons like Difficulty
+        else if (el && el.segmentedControl) {
             el.segmentedControl.addEventListener('click', (e) => {
                 const button = e.target.closest('.segmented-btn');
                 if (button) {
@@ -165,11 +170,23 @@ function bindFilterEventListeners() {
         }
     });
 
+    // Close dropdowns if clicking outside
+    document.addEventListener('click', (e) => {
+        config.filterKeys.forEach(key => {
+            const el = dom.filterElements[key];
+            if (el && el.container && !el.container.contains(e.target)) {
+                if (el.dropdown) el.dropdown.style.display = 'none';
+            }
+        });
+    });
+
+    // Main action buttons
     dom.startQuizBtn.addEventListener('click', startQuiz);
     dom.createPptBtn.addEventListener('click', createPPT);
     dom.createPdfBtn.addEventListener('click', createPDF);
     dom.downloadJsonBtn.addEventListener('click', downloadJSON);
     
+    // Reset buttons
     const resetAndUpdate = () => {
         resetAllFilters();
         applyFiltersAndUpdateUI();
@@ -178,17 +195,22 @@ function bindFilterEventListeners() {
     dom.resetFiltersBtnPpt.addEventListener('click', resetAndUpdate);
     dom.resetFiltersBtnJson.addEventListener('click', resetAndUpdate);
 
+    // Quick start buttons
     dom.quickStartButtons.forEach(button => {
         button.addEventListener('click', () => handleQuickStart(button.dataset.preset));
     });
 
+    // Active filter summary bar for removing tags
     dom.activeFiltersSummaryBar.addEventListener('click', (e) => {
         if (e.target.classList.contains('tag-close-btn')) {
             const { key, value } = e.target.dataset;
             removeFilter(key, value);
         }
     });
-      areFilterListenersBound = true; // <-- ADD THIS LINE AT THE BOTTOM
+
+    // This flag is set at the very end to confirm all listeners are attached.
+    areFilterListenersBound = true;
+    console.log("Filter event listeners have been successfully bound ONCE.");
 }
 
 async function loadQuestionsForFiltering() {
@@ -439,32 +461,13 @@ function filterQuestions(questions, filters) {
 }
 
 // In js/filter.js
-
-// --- TEMPORARY DEBUGGING VERSION ---
 function toggleDropdown(key) {
-    console.log(`--- toggleDropdown called for key: '${key}' ---`);
-
-    const dropdownElement = dom.filterElements[key].dropdown;
-    console.log("1. Found dropdown element in dom object:", dropdownElement);
-
-    if (dropdownElement) {
-        const currentDisplay = dropdownElement.style.display;
-        console.log("2. Current 'style.display' value is:", `'${currentDisplay}'`);
-
-        const newDisplay = currentDisplay === 'block' ? 'none' : 'block';
-        console.log("3. Attempting to set 'style.display' to:", `'${newDisplay}'`);
-
-        dropdownElement.style.display = newDisplay;
-
-        // This is the most important check. What is the style immediately after we set it?
-        console.log("4. After setting, 'style.display' is now:", `'${dropdownElement.style.display}'`);
-        console.log("------------------------------------------");
-    } else {
-        console.error("CRITICAL: Could not find the dropdown element in the DOM object for key:", key);
-        console.log("------------------------------------------");
+    const dropdown = dom.filterElements[key].dropdown;
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
     }
 }
-// --- END OF DEBUGGING VERSION ---
+
 function filterDropdownList(key) {
     const { searchInput, list } = dom.filterElements[key];
     const filter = searchInput.value.toLowerCase();
