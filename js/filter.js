@@ -573,19 +573,87 @@ function handleQuickStart(preset) {
     }, 250);
 }
 
+// In js/filter.js
+
 async function startQuiz(isQuickStart = false) {
     if (state.filteredQuestionsMasterList.length === 0) {
         Swal.fire({ target: dom.filterSection, icon: 'error', title: 'No questions found for the selected filters.' });
         return;
     }
 
-    if (!isQuickStart) {
-        const canProceed = await handleQueryAttempt();
-        if (!canProceed) return;
-    }
-    
-    if (appCallbacks.startQuiz) {
-        appCallbacks.startQuiz();
+    // --- NEW LOGIC: Show loading state on the button ---
+    dom.startQuizBtn.classList.add('loading');
+    dom.startQuizBtn.disabled = true;
+
+    try {
+        if (!isQuickStart) {
+            const canProceed = await handleQueryAttempt();
+            if (!canProceed) {
+                dom.startQuizBtn.classList.remove('loading'); // Stop loading on failure
+                dom.startQuizBtn.disabled = false;
+                return;
+            }
+        }
+
+        // 1. Get User ID
+        const userId = state.userProfile?.id;
+        if (!userId) {
+            throw new Error("User is not authenticated. Cannot start quiz.");
+        }
+
+        // 2. Calculate the next attempt number for this user
+        const { count, error: countError } = await supabase
+            .from('quiz_attempts')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+        if (countError) {
+            throw new Error(`Could not count previous attempts: ${countError.message}`);
+        }
+        const attemptNumber = (count || 0) + 1;
+
+        // 3. Prepare the data for the new quiz attempt record
+        const questionIds = state.filteredQuestionsMasterList.map(q => q.id);
+        const newAttemptData = {
+            user_id: userId,
+            attempt_number: attemptNumber,
+            status: 'in-progress',
+            filter_criteria: state.selectedFilters,
+            questions_list: questionIds,
+            total_questions: questionIds.length
+        };
+
+        // 4. INSERT the new record into the database
+        const { data: newAttempt, error: insertError } = await supabase
+            .from('quiz_attempts')
+            .insert(newAttemptData)
+            .select()
+            .single();
+
+        if (insertError) {
+            throw new Error(`Failed to create quiz attempt record: ${insertError.message}`);
+        }
+
+        // 5. SUCCESS: Store the new attempt's ID and start the quiz UI
+        state.currentAttemptId = newAttempt.id; // <-- CRITICAL STEP
+        console.log(`New quiz attempt created with ID: ${state.currentAttemptId}`);
+
+        if (appCallbacks.startQuiz) {
+            appCallbacks.startQuiz();
+        }
+
+    } catch (error) {
+        console.error("Error starting quiz:", error);
+        Swal.fire({
+            target: dom.filterSection,
+            icon: 'error',
+            title: 'Could Not Start Quiz',
+            text: 'There was a problem communicating with the database. Please try again.'
+        });
+    } finally {
+        // --- NEW LOGIC: Always remove loading state ---
+        dom.startQuizBtn.classList.remove('loading');
+        // The button will be re-enabled or disabled based on question count in applyFiltersAndUpdateUI
     }
 }
 
