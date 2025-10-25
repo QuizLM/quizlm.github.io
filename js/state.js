@@ -52,6 +52,7 @@ export let state = {
     isMouseDown: false,
     isQuizActive: false,
     userProfile: null, // To store profile data like subscription status
+      currentAttemptId: null, // <-- ADD THIS LINE
     selectedFilters: {
         subject: [], topic: [], subTopic: [], 
         difficulty: [], questionType: [], 
