@@ -196,6 +196,7 @@ body::before {
 }
 .hero-section h1 .highlight {
     background: -webkit-linear-gradient(45deg, var(--primary-color), var(--accent-dark));
+     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -1186,7 +1187,7 @@ body[data-theme='dark'] .quick-start-section h3 {
     border-radius: 6px;
     box-shadow: 0 4px 15px var(--shadow-color);
     z-index: 100;
-     max-height: 250px 
+     max-height: 250px ;
     display: flex;
     flex-direction: column;
 }
