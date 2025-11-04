@@ -291,6 +291,15 @@ function toggleDropdown(key) {
     if (dropdown) {
         const isVisible = dropdown.style.display === 'flex';
         dropdown.style.display = isVisible ? 'none' : 'flex';
+        const parent = dropdown.closest('.custom-multiselect');
+if (parent) {
+  if (isVisible) {
+    parent.classList.remove('open');
+  } else {
+    parent.classList.add('open');
+  }
+}
+
     }
 }
 
