@@ -287,18 +287,17 @@ function toggleDropdown(key) {
     });
 
     // Toggle the clicked dropdown
-    const dropdown = dom.filterElements[key]?.dropdown;
-    if (dropdown) {
-        const isVisible = dropdown.style.display === 'flex';
-        dropdown.style.display = isVisible ? 'none' : 'flex';
-        const parent = dropdown.closest('.custom-multiselect');
-if (parent) {
-  if (isVisible) {
-    parent.classList.remove('open');
-  } else {
-    parent.classList.add('open');
+const dropdown = dom.filterElements[key]?.dropdown;
+if (dropdown) {
+  const isVisible = getComputedStyle(dropdown).display === 'flex';
+  dropdown.style.display = isVisible ? 'none' : 'flex';
+
+  const parent = dropdown.closest('.custom-multiselect');
+  if (parent) {
+    parent.classList.toggle('open', !isVisible);
   }
 }
+
 
     }
 }
