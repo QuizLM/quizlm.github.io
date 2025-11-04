@@ -1,7 +1,7 @@
-
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import { fileURLToPath } from 'url';
+
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
@@ -11,14 +11,13 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [],
-      // The Gemini API key is still loaded from the environment.
-      // Supabase keys have been moved to supabaseClient.js for this preview environment.
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },
       resolve: {
         alias: {
+          // Fix: __dirname is not available in ES modules. The path is resolved using import.meta.url instead.
           '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.'),
         }
       }
