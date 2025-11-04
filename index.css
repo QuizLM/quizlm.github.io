@@ -1207,6 +1207,7 @@ body[data-theme='dark'] .quick-start-section h3 {
     position: relative;
 }
 
+/* --- FIXED: Dropdown visibility logic --- */
 .multiselect-dropdown-panel {
     position: absolute;
     top: calc(100% + 5px);
@@ -1217,9 +1218,14 @@ body[data-theme='dark'] .quick-start-section h3 {
     border-radius: 6px;
     box-shadow: 0 4px 15px var(--shadow-color);
     z-index: 100;
-     max-height: 250px ;
-    display: flex;
+    max-height: 250px;
+    display: none; /* Hidden by default */
     flex-direction: column;
+}
+
+/* When JS adds .open on parent, make it visible */
+.custom-multiselect.open > .multiselect-dropdown-panel {
+    display: flex !important;
 }
 
 .multiselect-search-input {
