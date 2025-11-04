@@ -72,7 +72,7 @@ export function initFilterModule(callbacks) {
      // Prevent multiple initializations
     if (state.filterInitialized) return;
     state.filterInitialized = true;
-    
+
     appCallbacks = callbacks;
     initializeTabs();
     bindFilterEventListeners();
@@ -300,6 +300,7 @@ function toggleDropdown(key) {
 
     const parent = dropdown.closest('.custom-multiselect');
     if (parent) parent.classList.toggle('open', !isVisible);
+
 }
 
 /**
@@ -329,21 +330,32 @@ function filterDropdownList(key) {
 function handleGlobalDropdownClose(event) {
     config.filterKeys.forEach(key => {
         const el = dom.filterElements[key];
-        if (el && el.dropdown && el.dropdown.style.display === 'flex') {
-            const isClickInsideToggleBtn = el.toggleBtn && el.toggleBtn.contains(event.target);
-            const isClickInsideDropdown = el.dropdown && el.dropdown.contains(event.target);
+        if (!el || !el.dropdown) return;
 
-            // If the click was not inside the toggle button OR the dropdown panel, close it.
-            if (!isClickInsideToggleBtn && !isClickInsideDropdown) {
-                el.dropdown.style.display = 'none';
-            }
+        // Determine if dropdown is visible by computed style or 'open' class
+        const isDropdownVisible = (
+            getComputedStyle(el.dropdown).display !== 'none' ||
+            el.dropdown.classList.contains('open')
+        );
+
+        if (!isDropdownVisible) return;
+
+        const isClickInsideToggleBtn = el.toggleBtn && el.toggleBtn.contains(event.target);
+        const isClickInsideDropdown = el.dropdown && el.dropdown.contains(event.target);
+
+        // If the click is outside both toggle and dropdown, close it
+        if (!isClickInsideToggleBtn && !isClickInsideDropdown) {
+            el.dropdown.style.display = 'none';
+            const parent = el.dropdown.closest('.custom-multiselect');
+            if (parent) parent.classList.remove('open');
         }
     });
 }
 
+
 function bindFilterEventListeners() {
-    // Add the single, smart global listener.
-    document.addEventListener('click', handleGlobalDropdownClose);
+  document.addEventListener('click', handleGlobalDropdownClose);
+
 // ✅ Delegated event listener for all filter toggle buttons
 if (dom.filterSection) {
     dom.filterSection.addEventListener('click', (event) => {
