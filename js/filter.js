@@ -108,11 +108,6 @@ export function initFilterModule(callbacks) {
     }
 }
 
-// =================================================================
-// START OF UI FIX SECTION
-// =================================================================
-
-// Standalone Helper Function 1: Populate a multi-select dropdown
 function populateMultiSelect(filterKey, options) {
     const listElement = dom.filterElements[filterKey]?.list;
     if (!listElement) return;
@@ -142,7 +137,6 @@ function populateMultiSelect(filterKey, options) {
     });
 }
 
-// Standalone Helper Function 2: Populate a segmented control
 function populateSegmentedControl(filterKey, options) {
     const container = dom.filterElements[filterKey]?.segmentedControl;
     if (!container) return;
@@ -165,7 +159,6 @@ function populateSegmentedControl(filterKey, options) {
     });
 }
 
-// Main function to populate all controls initially
 function populateFilterControls() {
     const questions = state.allQuestionsMasterList;
     const unique = {
@@ -199,29 +192,15 @@ function populateFilterControls() {
     populateSegmentedControl('questionType', [...unique.questionType].sort());
 }
 
-// Event handler for any selection change
-// This is the new, corrected code for handleSelectionChange
-
 function handleSelectionChange(filterKey, value) {
     const selectedValues = state.selectedFilters[filterKey];
-    
-    // Convert the incoming value to a string to ensure consistency
     const stringValue = String(value);
 
-    if (dom.filterElements[filterKey].segmentedControl) {
-        const index = selectedValues.indexOf(stringValue);
-        if (index > -1) {
-            selectedValues.splice(index, 1);
-        } else {
-            selectedValues.push(stringValue); // <-- FIXED
-        }
+    const index = selectedValues.indexOf(stringValue);
+    if (index > -1) {
+        selectedValues.splice(index, 1);
     } else {
-        const index = selectedValues.indexOf(stringValue);
-        if (index > -1) {
-            selectedValues.splice(index, 1);
-        } else {
-            selectedValues.push(stringValue); // <-- FIXED
-        }
+        selectedValues.push(stringValue);
     }
 
     if (filterKey === 'subject') {
@@ -234,14 +213,14 @@ function handleSelectionChange(filterKey, value) {
     onFilterStateChange();
 }
 
-// Main orchestrator for UI updates
+const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
+
 function onFilterStateChange() {
     updateDependentFilters();
-    applyFiltersAndUpdateUI();
+    applyFiltersAndUpdateUIDebounced();
     updateActiveFiltersSummary();
 }
 
-// Handles the cascading logic for dependent dropdowns
 function updateDependentFilters() {
     const { subject: selectedSubjects, topic: selectedTopics } = state.selectedFilters;
     const { topic: topicElements, subTopic: subTopicElements } = dom.filterElements;
@@ -250,6 +229,7 @@ function updateDependentFilters() {
         topicElements.toggleBtn.disabled = true;
         topicElements.toggleBtn.textContent = "Select a Subject first";
         topicElements.list.innerHTML = '';
+        topicElements.toggleBtn.disabled = true;
     } else {
         topicElements.toggleBtn.disabled = false;
         const relevantTopics = new Set();
@@ -262,9 +242,9 @@ function updateDependentFilters() {
     }
 
     if (selectedTopics.length === 0) {
-        subTopicElements.toggleBtn.disabled = true;
         subTopicElements.toggleBtn.textContent = "Select a Topic first";
         subTopicElements.list.innerHTML = '';
+        subTopicElements.toggleBtn.disabled = true;
     } else {
         subTopicElements.toggleBtn.disabled = false;
         const relevantSubTopics = new Set();
@@ -279,21 +259,85 @@ function updateDependentFilters() {
     }
 }
 
-// Cleaned up event listeners
-const applyFiltersAndUpdateUIDebounced = debounce(applyFiltersAndUpdateUI, 200);
+/**
+ * Toggles the visibility of a dropdown panel and closes others.
+ * @param {string} key The filter key for the dropdown to toggle.
+ */
+function toggleDropdown(key) {
+    // Close all other dropdowns first
+    config.filterKeys.forEach(otherKey => {
+        if (otherKey !== key) {
+            const el = dom.filterElements[otherKey];
+            if (el && el.dropdown) {
+                el.dropdown.style.display = 'none';
+            }
+        }
+    });
 
-function bindFilterEventListeners() {
+    // Toggle the clicked dropdown
+    const dropdown = dom.filterElements[key]?.dropdown;
+    if (dropdown) {
+        const isVisible = dropdown.style.display === 'flex';
+        dropdown.style.display = isVisible ? 'none' : 'flex';
+    }
+}
+
+/**
+ * Filters the list of options in a dropdown based on user input.
+ * @param {string} key The filter key for the dropdown being searched.
+ */
+function filterDropdownList(key) {
+    const { searchInput, list } = dom.filterElements[key];
+    const filter = searchInput.value.toLowerCase();
+    list.querySelectorAll('.multiselect-item').forEach(item => {
+        const labelText = item.querySelector('span:not(.filter-option-count)').textContent.toLowerCase();
+        const checkbox = item.querySelector('input');
+        const isSelected = checkbox && checkbox.checked;
+
+        if (labelText.includes(filter) || isSelected) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Handles clicks anywhere on the document to close dropdowns if the click is "outside".
+ * @param {MouseEvent} event The click event.
+ */
+function handleGlobalDropdownClose(event) {
     config.filterKeys.forEach(key => {
         const el = dom.filterElements[key];
-        if (el.toggleBtn) {
-            el.toggleBtn.addEventListener('click', () => toggleDropdown(key));
-            el.searchInput.addEventListener('input', () => filterDropdownList(key));
-            document.addEventListener('click', (e) => {
-                if (!el.container || !el.container.contains(e.target)) {
-                    if (el.dropdown) el.dropdown.style.display = 'none';
-                }
-            });
+        if (el && el.dropdown && el.dropdown.style.display === 'flex') {
+            const isClickInsideToggleBtn = el.toggleBtn && el.toggleBtn.contains(event.target);
+            const isClickInsideDropdown = el.dropdown && el.dropdown.contains(event.target);
+
+            // If the click was not inside the toggle button OR the dropdown panel, close it.
+            if (!isClickInsideToggleBtn && !isClickInsideDropdown) {
+                el.dropdown.style.display = 'none';
+            }
         }
+    });
+}
+
+function bindFilterEventListeners() {
+    // Add the single, smart global listener.
+    document.addEventListener('click', handleGlobalDropdownClose);
+
+    config.filterKeys.forEach(key => {
+        const el = dom.filterElements[key];
+     if (el && el.toggleBtn) {
+    el.toggleBtn.addEventListener('click', (event) => {
+        // Prevent the global document click handler from immediately closing the dropdown
+        event.stopPropagation();
+        toggleDropdown(key);
+    });
+
+    if (el.searchInput) {
+        el.searchInput.addEventListener('input', () => filterDropdownList(key));
+    }
+}
     });
 
     dom.startQuizBtn.addEventListener('click', startQuiz);
@@ -321,7 +365,6 @@ function bindFilterEventListeners() {
     });
 }
 
-// Supabase-powered data loading function
 async function loadQuestionsForFiltering() {
     if (state.allQuestionsMasterList.length > 0) {
         populateFilterControls();
@@ -354,10 +397,6 @@ async function loadQuestionsForFiltering() {
         }, { once: true });
     }
 }
-
-// =================================================================
-// END OF UI FIX SECTION
-// =================================================================
 
 function initializeTabs() {
     dom.tabButtons.forEach(button => {
@@ -398,10 +437,9 @@ function buildClassificationHierarchy() {
 }
 
 function applyFiltersAndUpdateUI() {
-    // DYNAMIC COUNTING LOGIC
     config.filterKeys.forEach(key => {
-        const tempFilters = { ...state.selectedFilters };
-        tempFilters[key] = []; // Get counts based on all *other* active filters
+        const tempFilters = JSON.parse(JSON.stringify(state.selectedFilters));
+        tempFilters[key] = [];
 
         const relevantQuestions = filterQuestions(state.allQuestionsMasterList, tempFilters);
         const counts = new Map();
@@ -473,37 +511,6 @@ function filterQuestions(questions, filters) {
     });
 }
 
-
-// --- REPLACE your toggleDropdown function with this CORRECTED version ---
-function toggleDropdown(key) {
-    // This part closes all OTHER dropdowns first, which is a good feature from our recent attempts.
-    config.filterKeys.forEach(otherKey => {
-        if (otherKey !== key) {
-            const el = dom.filterElements[otherKey];
-            if (el && el.dropdown) {
-                el.dropdown.style.display = 'none';
-            }
-        }
-    });
-
-    // This part toggles the one you clicked, using the CORRECT display property.
-    const dropdown = dom.filterElements[key].dropdown;
-    if (dropdown) {
-        // Use 'flex' to match the CSS, not 'block'.
-        dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-    }
-}
-
-function filterDropdownList(key) {
-    const { searchInput, list } = dom.filterElements[key];
-    const filter = searchInput.value.toLowerCase();
-    list.querySelectorAll('.multiselect-item').forEach(item => {
-        const labelText = item.querySelector('span:not(.filter-option-count)').textContent.toLowerCase();
-        const isSelected = item.querySelector('input').checked;
-        item.style.display = (labelText.includes(filter) || isSelected) ? '' : 'flex';
-    });
-}
-
 function updateQuestionCount(count) {
     const countElements = [dom.questionCount, dom.pptQuestionCount, dom.pdfQuestionCount, dom.jsonQuestionCount];
     countElements.forEach(el => {
@@ -564,7 +571,6 @@ function resetAllFilters() {
     config.filterKeys.forEach(key => {
         state.selectedFilters[key] = [];
     });
-    // Repopulate and re-render everything from a clean state
     populateFilterControls(); 
     onFilterStateChange();
 }
@@ -581,7 +587,7 @@ function handleQuickStart(preset) {
         state.selectedFilters.difficulty.push(difficulty);
     }
     
-    onFilterStateChange(); // Update UI based on new state
+    onFilterStateChange();
 
     setTimeout(() => {
         let questionsForQuiz = [...state.filteredQuestionsMasterList];

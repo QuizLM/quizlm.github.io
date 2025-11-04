@@ -206,6 +206,5 @@ export function cacheDomElements() {
     dom.quizTitle = document.getElementById('quiz-title');
     dom.scoreTitle = document.getElementById('score-title');
     dom.reviewTitle = document.getElementById('review-title');
-     // ADD THIS LINE FOR DEBUGGING
-    console.log('Debug Check: Is the Subject toggle button being found?', dom.filterElements.subject.toggleBtn);
+  
 }

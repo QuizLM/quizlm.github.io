@@ -1,5 +1,5 @@
 {
   "name": "Quiz LM Beta",
-  "description": "An empty app",
+  "description": "Supabase and raxorpay and google sign in with server at supabase",
   "requestFramePermissions": []
 }
