@@ -297,9 +297,6 @@ function toggleDropdown(key) {
     if (parent) parent.classList.toggle('open', !isVisible);
 }
 
-
-    }
-
 /**
  * Filters the list of options in a dropdown based on user input.
  * @param {string} key The filter key for the dropdown being searched.
