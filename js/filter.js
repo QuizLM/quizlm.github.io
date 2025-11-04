@@ -167,6 +167,7 @@ function populateFilterControls() {
         examName: new Set(), examYear: new Set(), tags: new Set()
     };
 
+    // Collect all unique filter values
     questions.forEach(q => {
         config.filterKeys.forEach(key => {
             const value = q[key];
@@ -178,6 +179,7 @@ function populateFilterControls() {
         });
     });
 
+    // Populate main multi-select and segmented controls
     populateMultiSelect('subject', [...unique.subject].sort());
     
     dom.filterElements.topic.toggleBtn.disabled = true;
@@ -186,11 +188,21 @@ function populateFilterControls() {
     dom.filterElements.subTopic.toggleBtn.textContent = "Select a Topic first";
 
     populateMultiSelect('examName', [...unique.examName].sort());
-    populateMultiSelect('examYear', [...unique.examYear].sort((a,b) => b-a));
+    populateMultiSelect('examYear', [...unique.examYear].sort((a,b) => b - a));
     populateMultiSelect('tags', [...unique.tags].sort());
     populateSegmentedControl('difficulty', [...unique.difficulty].sort());
     populateSegmentedControl('questionType', [...unique.questionType].sort());
+
+    // ✅ FIX: Ensure all toggle buttons are properly configured for delegated click events
+    Object.keys(dom.filterElements).forEach(key => {
+        const el = dom.filterElements[key];
+        if (el && el.toggleBtn) {
+            el.toggleBtn.classList.add('filter-toggle-btn'); // ensures event delegation works
+            el.toggleBtn.dataset.key = key;                  // ensures correct key is attached
+        }
+    });
 }
+
 
 function handleSelectionChange(filterKey, value) {
     const selectedValues = state.selectedFilters[filterKey];
@@ -324,21 +336,24 @@ function handleGlobalDropdownClose(event) {
 function bindFilterEventListeners() {
     // Add the single, smart global listener.
     document.addEventListener('click', handleGlobalDropdownClose);
+// ✅ Delegated event listener for all filter toggle buttons
+if (dom.filterSection) {
+    dom.filterSection.addEventListener('click', (event) => {
+        const toggleBtn = event.target.closest('.filter-toggle-btn');
+        if (!toggleBtn) return;  // clicked something else
 
-    config.filterKeys.forEach(key => {
-        const el = dom.filterElements[key];
-     if (el && el.toggleBtn) {
-    el.toggleBtn.addEventListener('click', (event) => {
-        // Prevent the global document click handler from immediately closing the dropdown
+        // Each toggle button must have its filter key stored in data-key
+        const key = toggleBtn.dataset.key;
+        if (!key || !dom.filterElements[key]) return;
+
+        // Prevent global close handler
         event.stopPropagation();
+
         toggleDropdown(key);
     });
-
-    if (el.searchInput) {
-        el.searchInput.addEventListener('input', () => filterDropdownList(key));
-    }
 }
-    });
+
+  
 
     dom.startQuizBtn.addEventListener('click', startQuiz);
     dom.createPptBtn.addEventListener('click', createPPT);
