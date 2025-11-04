@@ -66,10 +66,13 @@ async function handleQueryAttempt() {
     return true;
 }
 
-if (state.filterInitialized) return;
-state.filterInitialized = true;
 
 export function initFilterModule(callbacks) {
+
+     // Prevent multiple initializations
+    if (state.filterInitialized) return;
+    state.filterInitialized = true;
+    
     appCallbacks = callbacks;
     initializeTabs();
     bindFilterEventListeners();
