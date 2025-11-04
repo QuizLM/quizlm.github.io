@@ -76,6 +76,20 @@ function showView(viewId, options = {}) {
         const jsonTab = document.querySelector('.tab-btn[data-tab="json-panel"]');
         const quizTab = document.querySelector('.tab-btn[data-tab="quiz-panel"]');
 
+        // Initialize the filter module when filter section becomes visible
+        try {
+            initFilterModule({
+                confirmGoBackToHome: () => showView('homepage-section'),
+                openPaidServicesModal: () => {
+                    const paidModal = document.getElementById('paid-services-overlay');
+                    if (paidModal) paidModal.style.display = 'flex';
+                }
+            });
+        } catch (err) {
+            console.error('Error initializing filter module:', err);
+        }
+
+
         if (options.mode === 'quiz') {
             // Quiz-only mode: Hide premium tabs
             if (pptTab) pptTab.style.display = 'none';

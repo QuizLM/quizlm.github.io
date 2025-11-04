@@ -66,6 +66,8 @@ async function handleQueryAttempt() {
     return true;
 }
 
+if (state.filterInitialized) return;
+state.filterInitialized = true;
 
 export function initFilterModule(callbacks) {
     appCallbacks = callbacks;
