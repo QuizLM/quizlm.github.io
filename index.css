@@ -1207,26 +1207,80 @@ body[data-theme='dark'] .quick-start-section h3 {
     position: relative;
 }
 
-/* --- FIXED: Dropdown visibility logic --- */
+/* === FILTER DROPDOWN: merged structure + animation polish === */
 .multiselect-dropdown-panel {
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    width: 100%;
-    background-color: var(--container-bg);
-    border: 1px solid var(--button-border-color);
-    border-radius: 6px;
-    box-shadow: 0 4px 15px var(--shadow-color);
-    z-index: 100;
-    max-height: 250px;
-    display: none; /* Hidden by default */
-    flex-direction: column;
+  /* — Your original structural layout — */
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  background-color: var(--container-bg);
+  border: 1px solid var(--button-border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 15px var(--shadow-color);
+  z-index: 100;
+  flex-direction: column;
+
+  /* — Unified motion and depth — */
+  max-height: 0;                 /* collapsed by default  */
+  opacity: 0;
+  transform: scaleY(0.95);
+  transform-origin: top;
+  overflow: hidden;
+  padding: 0.5rem 0;
+  margin-top: 0.3rem;
+  transition: max-height 0.25s ease-out,
+    opacity 0.25s ease-out,
+    transform 0.25s ease-out,
+    box-shadow 0.25s ease-out;
 }
 
-/* When JS adds .open on parent, make it visible */
+/* When JS adds .open on parent, reveal it smoothly */
 .custom-multiselect.open > .multiselect-dropdown-panel {
-    display: flex !important;
+  display: flex !important;      /* your old visibility rule */
+  max-height: 300px;             /* animated expansion */
+  opacity: 1;
+  transform: scaleY(1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
+
+/* Dark-mode variant */
+body[data-theme='dark'] .multiselect-dropdown-panel {
+  background-color: var(--container-bg);
+  border-color: var(--border-color);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+body[data-theme='dark'] .custom-multiselect.open > .multiselect-dropdown-panel {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+}
+
+/* === Optional Fade-Out Close Animation === */
+
+/* When dropdown is closing (JS adds .closing briefly) */
+.custom-multiselect.closing > .multiselect-dropdown-panel {
+  max-height: 0;
+  opacity: 0;
+  transform: scaleY(0.95);
+  transition:
+    max-height 0.25s ease-in,
+    opacity 0.2s ease-in,
+    transform 0.2s ease-in;
+}
+
+
+@media (max-width: 600px) {
+  .multiselect-dropdown-panel {
+    position: fixed;
+    top: 20%;
+    left: 5vw;
+    width: 90vw;
+    max-height: 60vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    z-index: 9999;
+  }
+}
+
 
 .multiselect-search-input {
     width: 100%;

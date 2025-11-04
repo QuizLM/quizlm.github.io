@@ -115,8 +115,15 @@ export function initFilterModule(callbacks) {
 
 function populateMultiSelect(filterKey, options) {
     const listElement = dom.filterElements[filterKey]?.list;
+      const searchInput = dom.filterElements[filterKey]?.searchInput; // 👈 grab the search bar element
     if (!listElement) return;
 
+
+ // ✅ Add this: wire up search listener
+    if (searchInput) {
+        searchInput.oninput = () => filterDropdownList(filterKey);
+    }
+    
     const selectedValues = state.selectedFilters[filterKey] || [];
     listElement.innerHTML = '';
     options.forEach(opt => {
@@ -295,12 +302,26 @@ function toggleDropdown(key) {
     const dropdown = dom.filterElements[key]?.dropdown;
     if (!dropdown) return;
 
-    const isVisible = getComputedStyle(dropdown).display !== 'none';
-    dropdown.style.display = isVisible ? 'none' : 'flex';
+const isVisible = getComputedStyle(dropdown).display !== 'none';
+const parent = dropdown.closest('.custom-multiselect');
 
-    const parent = dropdown.closest('.custom-multiselect');
-    if (parent) parent.classList.toggle('open', !isVisible);
-
+if (isVisible) {
+  // Animate close
+  if (parent) {
+    parent.classList.add('closing');
+    parent.classList.remove('open');
+    setTimeout(() => {
+      parent.classList.remove('closing');
+      dropdown.style.display = 'none';
+    }, 250);
+  } else {
+    dropdown.style.display = 'none';
+  }
+} else {
+  // Open
+  dropdown.style.display = 'flex';
+  if (parent) parent.classList.add('open');
+}
 }
 
 /**
@@ -344,11 +365,18 @@ function handleGlobalDropdownClose(event) {
         const isClickInsideDropdown = el.dropdown && el.dropdown.contains(event.target);
 
         // If the click is outside both toggle and dropdown, close it
-        if (!isClickInsideToggleBtn && !isClickInsideDropdown) {
+       if (!isClickInsideToggleBtn && !isClickInsideDropdown) {
+    const parent = el.dropdown.closest('.custom-multiselect');
+    if (parent) {
+        parent.classList.add('closing');
+        parent.classList.remove('open');
+        setTimeout(() => {
+            parent.classList.remove('closing');
             el.dropdown.style.display = 'none';
-            const parent = el.dropdown.closest('.custom-multiselect');
-            if (parent) parent.classList.remove('open');
-        }
+        }, 250);
+    } else {
+        el.dropdown.style.display = 'none';
+    }}
     });
 }
 
