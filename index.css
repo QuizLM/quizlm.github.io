@@ -785,6 +785,10 @@ NEW: LOGIN GATE STYLES
 /* =======================================================
 NEW: FILTER SECTION STYLES
 ======================================================= */
+
+
+
+
 #filter-section {
     text-align: center;
 }
@@ -990,6 +994,12 @@ body[data-theme='dark'] .quick-start-section h3 {
     margin-bottom: 8px;
 }
 
+/* =======================================================
+   Unified styles for dropdown toggle buttons
+   Both new (.filter-toggle-btn) and old (.multiselect-toggle-btn)
+   ======================================================= */
+
+.filter-toggle-btn,
 .multiselect-toggle-btn {
     width: 100%;
     padding: 10px;
@@ -1003,14 +1013,20 @@ body[data-theme='dark'] .quick-start-section h3 {
     font-family: 'Poppins', sans-serif;
     position: relative;
 }
+
+/* Disabled state */
+.filter-toggle-btn:disabled,
 .multiselect-toggle-btn:disabled {
     background-color: var(--button-hover-bg);
     cursor: not-allowed;
     opacity: 0.7;
 }
 
+/* Downward caret icon on right side */
+.filter-toggle-btn::after,
 .multiselect-toggle-btn::after {
     content: '\f078'; /* caret-down */
+
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
     position: absolute;
@@ -1018,6 +1034,20 @@ body[data-theme='dark'] .quick-start-section h3 {
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-color-light);
+}
+
+/* ===== Caret rotation animation for open dropdowns ===== */
+
+/* Smooth rotation transition */
+.filter-toggle-btn::after,
+.multiselect-toggle-btn::after {
+  transition: transform 0.25s ease;
+}
+
+/* When dropdown is open (displayed as flex), rotate caret upward */
+.custom-multiselect.open > .filter-toggle-btn::after,
+.custom-multiselect.open > .multiselect-toggle-btn::after {
+  transform: translateY(-50%) rotate(180deg);
 }
 
 

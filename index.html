@@ -274,100 +274,107 @@
             </div>
         </div>
         
-        <div class="filter-grid">
-            <!-- Classification Filters -->
-            <div class="filter-group">
-                <h3><i class="fas fa-sitemap"></i> By Classification</h3>
-                <div class="filter-control">
-                    <label for="subject-toggle-btn">Subject</label>
-                    <div class="custom-multiselect" id="subject-multiselect-container">
-                        <button id="subject-toggle-btn" class="multiselect-toggle-btn">Select Subjects</button>
-                        <div id="subject-dropdown" class="multiselect-dropdown-panel" style="display: none;">
-                            <input type="text" id="subject-search-input" class="multiselect-search-input" placeholder="Search subjects...">
-                            <div id="subject-list" class="multiselect-list-container"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="filter-control">
-                    <label for="topic-toggle-btn">Topic</label>
-                     <div class="custom-multiselect" id="topic-multiselect-container">
-                        <button id="topic-toggle-btn" class="multiselect-toggle-btn">Select Topics</button>
-                        <div id="topic-dropdown" class="multiselect-dropdown-panel" style="display: none;">
-                            <input type="text" id="topic-search-input" class="multiselect-search-input" placeholder="Search topics...">
-                            <div id="topic-list" class="multiselect-list-container"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="filter-control">
-                    <label for="subTopic-toggle-btn">Sub-Topic</label>
-                     <div class="custom-multiselect" id="subTopic-multiselect-container">
-                        <button id="subTopic-toggle-btn" class="multiselect-toggle-btn">Select Sub-Topics</button>
-                        <div id="subTopic-dropdown" class="multiselect-dropdown-panel" style="display: none;">
-                            <input type="text" id="subTopic-search-input" class="multiselect-search-input" placeholder="Search sub-topics...">
-                            <div id="subTopic-list" class="multiselect-list-container"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="filter-grid">
+    <!-- Classification Filters -->
+    <div class="filter-group">
+        <h3><i class="fas fa-sitemap"></i> By Classification</h3>
 
-            <!-- Difficulty & Type Filters -->
-            <div class="filter-group">
-                <h3><i class="fas fa-layer-group"></i> By Properties</h3>
-                <div class="filter-control">
-                    <label>Difficulty</label>
-                    <div id="difficulty-segmented-control" class="segmented-control">
-                        <!-- JS will populate -->
-                    </div>
-                </div>
-                <div class="filter-control">
-                    <label>Question Type</label>
-                     <div id="questionType-segmented-control" class="segmented-control">
-                        <!-- JS will populate -->
-                    </div>
+        <div class="filter-control">
+            <label for="subject-toggle-btn">Subject</label>
+            <div class="custom-multiselect" id="subject-multiselect-container">
+                <button id="subject-toggle-btn" class="filter-toggle-btn" data-key="subject">Select Subjects</button>
+                <div id="subject-dropdown" class="multiselect-dropdown-panel" style="display: none;">
+                    <input type="text" id="subject-search-input" class="multiselect-search-input" placeholder="Search subjects...">
+                    <div id="subject-list" class="multiselect-list-container"></div>
                 </div>
             </div>
+        </div>
 
-            <!-- Source Filters -->
-            <div class="filter-group">
-                <h3><i class="fas fa-file-alt"></i> By Source</h3>
-                <div class="filter-control">
-                    <label for="examName-toggle-btn">Exam Name</label>
-                    <div class="custom-multiselect" id="examName-multiselect-container">
-                        <button id="examName-toggle-btn" class="multiselect-toggle-btn">Select Exam Names</button>
-                        <div id="examName-dropdown" class="multiselect-dropdown-panel" style="display: none;">
-                             <input type="text" id="examName-search-input" class="multiselect-search-input" placeholder="Search exam names...">
-                            <div id="examName-list" class="multiselect-list-container"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="filter-control">
-                    <label for="examYear-toggle-btn">Exam Year</label>
-                    <div class="custom-multiselect" id="examYear-multiselect-container">
-                        <button id="examYear-toggle-btn" class="multiselect-toggle-btn">Select Exam Years</button>
-                        <div id="examYear-dropdown" class="multiselect-dropdown-panel" style="display: none;">
-                            <input type="text" id="examYear-search-input" class="multiselect-search-input" placeholder="Search years...">
-                            <div id="examYear-list" class="multiselect-list-container"></div>
-                        </div>
-                    </div>
+        <div class="filter-control">
+            <label for="topic-toggle-btn">Topic</label>
+            <div class="custom-multiselect" id="topic-multiselect-container">
+                <button id="topic-toggle-btn" class="filter-toggle-btn" data-key="topic">Select Topics</button>
+                <div id="topic-dropdown" class="multiselect-dropdown-panel" style="display: none;">
+                    <input type="text" id="topic-search-input" class="multiselect-search-input" placeholder="Search topics...">
+                    <div id="topic-list" class="multiselect-list-container"></div>
                 </div>
             </div>
-             <!-- Tags Filter -->
-            <div class="filter-group">
-                <h3><i class="fas fa-tags"></i> By Tags</h3>
-                <div class="filter-control">
-                    <label for="tags-toggle-btn">Tag</label>
-                    <div class="custom-multiselect" id="tags-multiselect-container">
-                        <button id="tags-toggle-btn" class="multiselect-toggle-btn">Select Tags</button>
-                        <div id="tags-dropdown" class="multiselect-dropdown-panel" style="display: none;">
-                            <input type="text" id="tags-search-input" class="multiselect-search-input" placeholder="Search tags...">
-                            <div id="tags-list" class="multiselect-list-container">
-                                <!-- JS will populate this -->
-                            </div>
-                        </div>
+        </div>
+
+        <div class="filter-control">
+            <label for="subTopic-toggle-btn">Sub-Topic</label>
+            <div class="custom-multiselect" id="subTopic-multiselect-container">
+                <button id="subTopic-toggle-btn" class="filter-toggle-btn" data-key="subTopic">Select Sub-Topics</button>
+                <div id="subTopic-dropdown" class="multiselect-dropdown-panel" style="display: none;">
+                    <input type="text" id="subTopic-search-input" class="multiselect-search-input" placeholder="Search sub-topics...">
+                    <div id="subTopic-list" class="multiselect-list-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Difficulty & Type Filters -->
+    <div class="filter-group">
+        <h3><i class="fas fa-layer-group"></i> By Properties</h3>
+        <div class="filter-control">
+            <label>Difficulty</label>
+            <div id="difficulty-segmented-control" class="segmented-control">
+                <!-- JS will populate -->
+            </div>
+        </div>
+        <div class="filter-control">
+            <label>Question Type</label>
+            <div id="questionType-segmented-control" class="segmented-control">
+                <!-- JS will populate -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Filters -->
+    <div class="filter-group">
+        <h3><i class="fas fa-file-alt"></i> By Source</h3>
+
+        <div class="filter-control">
+            <label for="examName-toggle-btn">Exam Name</label>
+            <div class="custom-multiselect" id="examName-multiselect-container">
+                <button id="examName-toggle-btn" class="filter-toggle-btn" data-key="examName">Select Exam Names</button>
+                <div id="examName-dropdown" class="multiselect-dropdown-panel" style="display: none;">
+                    <input type="text" id="examName-search-input" class="multiselect-search-input" placeholder="Search exam names...">
+                    <div id="examName-list" class="multiselect-list-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-control">
+            <label for="examYear-toggle-btn">Exam Year</label>
+            <div class="custom-multiselect" id="examYear-multiselect-container">
+                <button id="examYear-toggle-btn" class="filter-toggle-btn" data-key="examYear">Select Exam Years</button>
+                <div id="examYear-dropdown" class="multiselect-dropdown-panel" style="display: none;">
+                    <input type="text" id="examYear-search-input" class="multiselect-search-input" placeholder="Search years...">
+                    <div id="examYear-list" class="multiselect-list-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tags Filter -->
+    <div class="filter-group">
+        <h3><i class="fas fa-tags"></i> By Tags</h3>
+        <div class="filter-control">
+            <label for="tags-toggle-btn">Tag</label>
+            <div class="custom-multiselect" id="tags-multiselect-container">
+                <button id="tags-toggle-btn" class="filter-toggle-btn" data-key="tags">Select Tags</button>
+                <div id="tags-dropdown" class="multiselect-dropdown-panel" style="display: none;">
+                    <input type="text" id="tags-search-input" class="multiselect-search-input" placeholder="Search tags...">
+                    <div id="tags-list" class="multiselect-list-container">
+                        <!-- JS will populate this -->
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
 
         <div id="active-filters-summary-bar-container" style="display: none;">
             <h3>Active Filters</h3>
