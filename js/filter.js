@@ -276,26 +276,25 @@ function updateDependentFilters() {
  * @param {string} key The filter key for the dropdown to toggle.
  */
 function toggleDropdown(key) {
-    // Close all other dropdowns first
+    // Close all others first
     config.filterKeys.forEach(otherKey => {
         if (otherKey !== key) {
             const el = dom.filterElements[otherKey];
             if (el && el.dropdown) {
                 el.dropdown.style.display = 'none';
+                el.dropdown.closest('.custom-multiselect')?.classList.remove('open');
             }
         }
     });
 
-    // Toggle the clicked dropdown
-const dropdown = dom.filterElements[key]?.dropdown;
-if (dropdown) {
-  const isVisible = getComputedStyle(dropdown).display === 'flex';
-  dropdown.style.display = isVisible ? 'none' : 'flex';
+    const dropdown = dom.filterElements[key]?.dropdown;
+    if (!dropdown) return;
 
-  const parent = dropdown.closest('.custom-multiselect');
-  if (parent) {
-    parent.classList.toggle('open', !isVisible);
-  }
+    const isVisible = getComputedStyle(dropdown).display !== 'none';
+    dropdown.style.display = isVisible ? 'none' : 'flex';
+
+    const parent = dropdown.closest('.custom-multiselect');
+    if (parent) parent.classList.toggle('open', !isVisible);
 }
 
 
