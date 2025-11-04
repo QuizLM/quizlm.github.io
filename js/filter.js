@@ -300,7 +300,6 @@ if (dropdown) {
 
 
     }
-}
 
 /**
  * Filters the list of options in a dropdown based on user input.
