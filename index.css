@@ -354,6 +354,7 @@ body[data-theme='dark'] .paid-tag {
     align-items: center;
     padding: 10px 20px 30px 20px;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0; /* Prevent profile from shrinking */
 }
 
 #side-menu-profile-pic {
@@ -411,6 +412,14 @@ body[data-theme='dark'] .subscription-badge.spark-plan {
 }
 body[data-theme='dark'] .subscription-badge.pro-plan {
     color: #111827;
+}
+
+.side-menu-nav {
+    flex-grow: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0; /* Fix for flexbox scrolling */
+    padding-bottom: 20px; /* Add padding at bottom for scrolling space */
 }
 
 .side-menu-nav ul {
