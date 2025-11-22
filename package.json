@@ -10,16 +10,11 @@
   },
   "dependencies": {
     "@google/genai": "^1.23.0",
-    "@supabase/supabase-js": "latest",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.6"
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
-    "@types/react": "^19.2.6",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
+    
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
